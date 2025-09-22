@@ -14,16 +14,25 @@ public class TokenStorage : ITokenStorage
 
     public async Task<string?> GetAsync(string key)
     {
+        if (string.IsNullOrWhiteSpace(key))
+            throw new ArgumentException("Key cannot be null or empty", nameof(key));
+
         return await _jsRuntime.InvokeAsync<string>("localStorage.getItem", key);
     }
 
     public async Task RemoveAsync(string key)
     {
+        if (string.IsNullOrWhiteSpace(key))
+            throw new ArgumentException("Key cannot be null or empty", nameof(key));
+
         await _jsRuntime.InvokeVoidAsync("localStorage.removeItem", key);
     }
 
-    public async Task SetAsync(string key, string value)
+    public async Task SetAsync(string key, string? value)
     {
+        if (string.IsNullOrWhiteSpace(key))
+            throw new ArgumentException("Key cannot be null or empty", nameof(key));
+
         await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, value);
     }
 }

@@ -23,6 +23,7 @@ public static class ServiceCollectionExtensions
             throw new InvalidOperationException("RampEdge BaseAddress is missing.");
 
         services.AddSingleton<ITokenStorage, TokenStorage>();
+        services.AddSingleton<IAuthenticationService, AuthenticationService>();
 
         services.AddTransient<StaticAppHeadersHandler>();
         services.AddTransient(sp => new BearerTokenHandler(
@@ -71,6 +72,7 @@ public static class ServiceCollectionExtensions
         services.Configure<RampEdgeSettings>(o => configureSettings(o));
 
         services.AddSingleton<ITokenStorage, TokenStorage>();
+        services.AddSingleton<IAuthenticationService, AuthenticationService>();
 
         services.AddTransient<StaticAppHeadersHandler>();
         services.AddTransient(sp => new BearerTokenHandler(

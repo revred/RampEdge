@@ -60,7 +60,19 @@ public static class TestHelpers
 
     public static string GenerateMockToken()
     {
-        return "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IlRlc3QgVXNlciIsImlhdCI6MTUxNjIzOTAyMiwiZXhwIjoxOTk5OTk5OTk5fQ.hqWGX4p5HS5nRJmQdWOs-kVq9_tL7rQkUPAJ7RGX5eI";
+        return GenerateMockToken(DateTime.UtcNow.AddHours(1));
+    }
+
+    public static string GenerateMockToken(DateTime expiry)
+    {
+        var unixExpiry = ((DateTimeOffset)expiry).ToUnixTimeSeconds();
+
+        // Create a proper JWT with header, payload, and signature
+        var header = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes("{\"alg\":\"HS256\",\"typ\":\"JWT\"}"));
+        var payload = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes($"{{\"sub\":\"1234567890\",\"name\":\"Test User\",\"email\":\"test@rampedge.com\",\"iat\":1516239022,\"exp\":{unixExpiry}}}"));
+        var signature = "hqWGX4p5HS5nRJmQdWOs-kVq9_tL7rQkUPAJ7RGX5eI";
+
+        return $"{header}.{payload}.{signature}";
     }
 
     public static class JsonResponses
