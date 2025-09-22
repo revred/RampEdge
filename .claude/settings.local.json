@@ -22,7 +22,13 @@
       "Bash(git checkout:*)",
       "Bash(dotnet build)",
       "Bash(dotnet build:*)",
-      "Bash(gh pr create:*)"
+      "Bash(gh pr create:*)",
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet nuget list:*)",
+      "Bash(dotnet pack:*)",
+      "Bash(powershell:*)",
+      "Bash(dotnet list:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
