@@ -24,6 +24,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ITokenStorage, TokenStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
+        services.AddSingleton<IProductService, ProductService>();
 
         services.AddTransient<StaticAppHeadersHandler>();
         services.AddTransient(sp => new BearerTokenHandler(
@@ -73,6 +74,7 @@ public static class ServiceCollectionExtensions
 
         services.AddSingleton<ITokenStorage, TokenStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
+        services.AddSingleton<IProductService, ProductService>();
 
         services.AddTransient<StaticAppHeadersHandler>();
         services.AddTransient(sp => new BearerTokenHandler(
