@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir C:CodeHippoHex)",
+      "Bash(dir:*)",
+      "Read(//d/Code/HippoHex/Maker.Client/**)",
+      "Bash(dotnet new:*)",
+      "Bash(dotnet add reference:*)",
+      "Bash(dotnet sln add:*)",
+      "Bash(dotnet restore:*)",
+      "Bash(dotnet test)",
+      "Bash(find:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)",
+      "Bash(git reset:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
