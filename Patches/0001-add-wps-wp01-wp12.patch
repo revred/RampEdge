@@ -1,0 +1,419 @@
+diff --git a/WPS/WP01_Product_Sync_and_Rendering.md b/WPS/WP01_Product_Sync_and_Rendering.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP01_Product_Sync_and_Rendering.md
+@@ -0,0 +1,54 @@
++# WP01 — Product Sync and Rendering (Full WPS)
++
++**Epic:** Product & Content Management  
++**Work Package:** `WP01_Product_Sync_and_Rendering`  
++**Priority:** 5 (Core MVP) | **Complexity:** Medium | **Owner:** RampEdge Core Team
++
++## 0) Intent & Rationale
++Provide the **single source of product truth** from RampEdge/Maker APIs to the UI. This WP enables fast, reliable, accessible product lists/cards that keep the catalog current without manual edits. It is prerequisite for pricing, cart, checkout, analytics.
++
++## 1) Scope
++- API client (ETag/SWR), delta refresh (2s polling → SSE later)
++- Components: `<ProductList/>`, `<ProductCard/>` (Blazor RCL planned; patterns apply to any frontend)
++- Skeleton loaders, error/empty states, SSR hydration safety, A11y (AA)
++
++## 2) User Stories & AC
++- **Owner:** “When I update a product, visitors see it ≤2s.”  
++  **AC:** Given CMS update → When page open → Then card/list content updates without reload in ≤2s.
++- **Developer:** “Drop in a component and it renders.”  
++  **AC:** Given `<ProductList PageSize=24/>` → Then grid renders responsive with paging and skeletons.
++- **Visitor:** “See accurate spec/availability quickly.”  
++  **AC:** LCP ≤2.5s on reference device; badges show availability/MOQ.
++
++## 3) API (example)
++`GET /v1/products?category=&page=&pageSize=`  (ETag support)  
++`GET /v1/products/changes?since=etag|iso`
++
++## 4) Implementation
++- Read-through cache (IndexedDB/memory) + SWR revalidate on focus/interval
++- View models map API → UI (title, summary, specs[{k,v,u}], media[], availability)
++- Grid: 2–3–4 cols by breakpoint; reserve image height to avoid CLS
++- Events: `product.view`, `product.card.click`, `product.delta.applied`
++
++## 5) Performance & A11y
++- Budgets: LCP ≤2.5s; per-surface JS ≤20KB gz; P95 list TTFB (cached) <250ms
++- A11y: roles list/listitem, keyboard traversal, alt text, focus visible
++
++## 6) Test Plan
++- Unit: model mapping; cache & ETag logic; store reducers/selectors
++- E2E: list → delta update in ≤2s; error boundary recovers; skeletons → content
++- A11y: axe pass ≥90; manual keyboard traversal
++- Perf: Lighthouse budget gates on CI
++
++## 7) Definition of Done
++- [ ] Live API integration; delta refresh ≤2s
++- [ ] Responsive grid/cards without CLS; skeletons implemented
++- [ ] Events emitted; docs + examples included
++- [ ] Tests pass (unit+E2E), budgets met, a11y AA
++
++## 8) Example (Blazor)
++```razor
++@page "/catalog"
++<RampEdge.ProductList PageSize="24" />
++<RampEdge.ProductCard Sku="VALVE-16MM" />
++```
+diff --git a/WPS/WP02_Product_Detail_and_Media.md b/WPS/WP02_Product_Detail_and_Media.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP02_Product_Detail_and_Media.md
+@@ -0,0 +1,37 @@
++# WP02 — Product Detail & Media
++
++**Epic:** Product & Content Management | **Priority:** 5 | **Complexity:** Easy–Medium
++
++## Intent
++Deliver rich product detail pages/cards: images, videos, downloadable PDFs, structured specs with units/tolerances.
++
++## Scope
++- `<ProductDetail/>` (page/fragment), `<ProductGallery/>`, spec tables, download links
++- Media handling with lazy loading; PDF open in new tab; file-type icons
++
++## Stories & AC
++- **Visitor:** “I can zoom images and swipe gallery on mobile.”  
++  **AC:** Pinch/zoom (desktop zoom on hover); swipe works; images have alt text.
++- **Engineer:** “I can download the PDF datasheet.”  
++  **AC:** Click → opens PDF in new tab; event `asset.download` fired.
++- **Owner:** “Add a media URL and it displays safely.”  
++  **AC:** Only whitelisted MIME/image origins load; broken images handled.
++
++## Implementation Notes
++- Fixed aspect ratio wrappers to avoid CLS; IntersectionObserver for lazy
++- Support `media[]`: `{url, kind:image|video|pdf, alt}`
++- Spec table supports `{key, value, unit}` rendering with localization
++
++## Security & A11y
++- Sanitize captions/HTML; never `innerHTML` for untrusted content
++- Keyboard nav: left/right in gallery; Esc closes lightbox
++
++## Test Plan
++- Unit: media renderer, spec formatter
++- Manual: device matrix (iOS/Android/desktop) for gallery
++- E2E: PDF downloads tracked; 404 media fallback
++
++## DoD
++- [ ] Detail + gallery render multiple media types
++- [ ] Lazy images, no CLS, a11y labels provided
++- [ ] Events logged for view/download
+diff --git a/WPS/WP03_Pricing_Rules_and_Discounts.md b/WPS/WP03_Pricing_Rules_and_Discounts.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP03_Pricing_Rules_and_Discounts.md
+@@ -0,0 +1,30 @@
++# WP03 — Pricing Rules & Discounts
++
++**Epic:** Pricing & Discounts | **Priority:** 5 | **Complexity:** Medium
++
++## Intent
++Real‑time computation of final price from base → FX → rules → tax. Show transparent discounts on product cards and in cart.
++
++## Scope
++- Rules engine (volume breaks, partner tiers, coupons as future)
++- Strike‑through display; per‑SKU/per‑category scopes
++
++## Stories & AC
++- **Owner:** “Configure 10+ price breaks.” → **AC:** Rules evaluate deterministically in <100ms.
++- **Buyer:** “Quantity change updates price immediately.” → **AC:** Price recalculated on qty input; totals consistent.
++- **Sales:** “Partner tier overrides apply.” → **AC:** Authenticated tier context changes effective price.
++
++## Implementation
++- Rule model: `{type: volume|tier|coupon, conditions, effect: percent|flat, scope}`
++- Deterministic evaluation order; memoize by `(sku, qty, tier)`
++- UI binds to selectors; emits `pricing.rule.applied`
++
++## Test Plan
++- Unit: rule evaluation matrix/fuzz
++- E2E: cart→checkout totals parity
++- Perf: p95 eval time budgeted <100ms
++
++## DoD
++- [ ] Engine + UI hooks integrated
++- [ ] Strike‑through and final price consistent across list/card/cart
++- [ ] Tests for overlap/edge cases; docs with JSON examples
+diff --git a/WPS/WP04_Multi_Currency_and_Tax.md b/WPS/WP04_Multi_Currency_and_Tax.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP04_Multi_Currency_and_Tax.md
+@@ -0,0 +1,26 @@
++# WP04 — Multi‑Currency & Tax Display
++
++**Epic:** Pricing & Discounts | **Priority:** 4 | **Complexity:** Medium
++
++## Intent
++Display prices in visitor’s currency with correct symbols, rounding, and tax labels (incl/excl by locale).
++
++## Scope
++- Currency rates polling (<30m freshness), locale auto‑detect & toggle
++- Tax badges: “incl. VAT” (GB/EU) vs “+ sales tax” (US) per policy
++
++## Stories & AC
++- **Visitor:** Toggle GBP/EUR/USD → **AC:** All visible prices switch, including cart and checkout.
++- **Owner:** Configure tax display policy per country → **AC:** Labels consistent site‑wide.
++
++## Implementation
++- ISO currency formatting; round rules per currency
++- Persist preference; SSR pre‑render currency when possible
++
++## Test Plan
++- Unit: FX math, rounding; symbol/format snapshots
++- E2E: cart+checkout amounts match product displays
++
++## DoD
++- [ ] Rates freshness <30m; toggle persists
++- [ ] Labels accurate; parity with checkout
+diff --git a/WPS/WP05_Cart_and_Store.md b/WPS/WP05_Cart_and_Store.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP05_Cart_and_Store.md
+@@ -0,0 +1,26 @@
++# WP05 — Cart & Store
++
++**Epic:** Checkout & Payments | **Priority:** 5 | **Complexity:** Easy
++
++## Intent
++Fast, reliable client cart with session persistence and currency awareness.
++
++## Scope
++- Add/remove/update qty; persist in localStorage/MemoryCache
++- Currency-aware totals; empty state UX
++
++## Stories & AC
++- **Visitor:** “Cart survives refresh.” → **AC:** Reload retains items and qtys.
++- **Owner:** “Cart events captured.” → **AC:** `cart.add`, `cart.remove`, `cart.update` emitted.
++
++## Implementation
++- Pure reducer/store with selectors, serialization; time‑boxed rehydration
++- Guard against stale pricing (refresh on resume/focus)
++
++## Test Plan
++- Unit: reducers/selectors; serialization
++- E2E: add→refresh→checkout happy path
++
++## DoD
++- [ ] Persisted cart, currency‑aware
++- [ ] Events emitted; empty/error states
+diff --git a/WPS/WP06_Checkout_Stripe_SmartPay.md b/WPS/WP06_Checkout_Stripe_SmartPay.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP06_Checkout_Stripe_SmartPay.md
+@@ -0,0 +1,28 @@
++# WP06 — Checkout (Stripe/SmartPay)
++
++**Epic:** Checkout & Payments | **Priority:** 5 | **Complexity:** Med–Hard
++
++## Intent
++Complete payment in ≤3 clicks using provider adapters; hosted‑checkout fallback if embed blocked.
++
++## Scope
++- Provider adapters (Stripe Elements first), ephemeral payment intent, webhooks
++- Success/Cancel redirects; receipt events
++
++## Stories & AC
++- **Buyer:** Pay with card/Apple Pay → **AC:** Charge succeeds and redirects to `SuccessUrl`.
++- **Owner:** Hosted fallback if CSP blocks → **AC:** Same basket on hosted page.
++
++## Implementation
++- Server creates intents; client handles Elements & error states
++- Webhook confirms order; emit `checkout.success|error`
++
++## Security
++- PCI delegated to provider; CSRF on server endpoints; token scopes minimal
++
++## Test Plan
++- Sandbox keys E2E; webhook replay tests; decline paths
++
++## DoD
++- [ ] Adapter runs with test keys end‑to‑end
++- [ ] Fallback path documented and verified
+diff --git a/WPS/WP07_Contact_and_Lead_Capture.md b/WPS/WP07_Contact_and_Lead_Capture.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP07_Contact_and_Lead_Capture.md
+@@ -0,0 +1,26 @@
++# WP07 — Contact & Lead Capture
++
++**Epic:** CRM & Lead Capture | **Priority:** 4 | **Complexity:** Easy
++
++## Intent
++Drop‑in contact/quote form that posts to CRM with GDPR consent and notifications.
++
++## Scope
++- `<ContactForm/>` component; server endpoint; consent text versioning
++- Notifications: email/Slack within 1 min
++
++## Stories & AC
++- **Visitor:** Submit form → **AC:** Lead appears in CRM; thank‑you UX shown.
++- **Owner:** Consent captured → **AC:** Consent text + ts stored.
++
++## Implementation
++- Honeypot + optional reCAPTCHA; throttling (429) with friendly UX
++- Event `lead.submit` with minimal PII
++
++## Test Plan
++- Unit: schema validation; throttle behavior
++- E2E: submission happy path; consent captured
++
++## DoD
++- [ ] CRM entry + notifications wired
++- [ ] GDPR consent persisted; anti‑spam in place
+diff --git a/WPS/WP08_CRM_Timeline_and_Events.md b/WPS/WP08_CRM_Timeline_and_Events.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP08_CRM_Timeline_and_Events.md
+@@ -0,0 +1,24 @@
++# WP08 — CRM Timeline & Events
++
++**Epic:** CRM & Lead Capture | **Priority:** 4 | **Complexity:** Medium
++
++## Intent
++Record visitor actions (downloads, views, form submits) into CRM timeline for sales follow‑up.
++
++## Scope
++- Event emitters + server sink; retries/idempotency; privacy filters
++
++## Stories & AC
++- **Sales:** See datasheet download history → **AC:** Timeline shows event with timestamps.
++
++## Implementation
++- Event schema versioned; PII minimized; batch with backoff
++- Download click → `asset.download`; form submit → `lead.submit`
++
++## Test Plan
++- Integration: event → sink → CRM
++- Fault injection: network failures retry
++
++## DoD
++- [ ] Timeline populated accurately
++- [ ] Privacy checks + idempotent writes
+diff --git a/WPS/WP09_Search_and_Typeahead.md b/WPS/WP09_Search_and_Typeahead.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP09_Search_and_Typeahead.md
+@@ -0,0 +1,24 @@
++# WP09 — Search & Typeahead
++
++**Epic:** Search & Navigation | **Priority:** 4 | **Complexity:** Medium
++
++## Intent
++Near‑instant search within catalog with top‑N suggestions and relevance tuned for specs.
++
++## Scope
++- Client prefix index + attribute keys; debounce 120ms; URL state
++
++## Stories & AC
++- **Visitor:** “Results update as I type.” → **AC:** <200ms latency for suggestions.
++- **Owner:** “Spec search works.” → **AC:** diameter/material fields indexed.
++
++## Implementation
++- Lightweight index in memory; fallback to server search for large catalogs
++- Relevance boosts for exact SKU/spec matches
++
++## Test Plan
++- Perf: keystroke latency; relevance snapshot tests
++
++## DoD
++- [ ] Top‑N suggestions; spec fields searchable
++- [ ] URL sync; back/forward navigation works
+diff --git a/WPS/WP10_Filtering_and_Facets.md b/WPS/WP10_Filtering_and_Facets.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP10_Filtering_and_Facets.md
+@@ -0,0 +1,24 @@
++# WP10 — Filtering & Facets
++
++**Epic:** Search & Navigation | **Priority:** 4 | **Complexity:** Medium
++
++## Intent
++Attribute‑based AND filters for category/spec/material/tolerance with clear reset.
++
++## Scope
++- Facet components; query‑string sync; empty‑state UX
++
++## Stories & AC
++- **Visitor:** Apply multiple filters → **AC:** Only matching products shown; clear‑all resets.
++- **Developer:** Place `<Filters/>` and wire to list → **AC:** Works with zero custom code.
++
++## Implementation
++- Attribute bitsets or server‑side filter API (large catalogs)
++- Persisted state in URL; SSR pre‑filter when possible
++
++## Test Plan
++- E2E: multi‑filter combos; browser back/forward
++
++## DoD
++- [ ] Facets render; AND logic correct; clear‑all present
++- [ ] SSR-friendly first render
+diff --git a/WPS/WP11_Presentation_and_Responsive_UI.md b/WPS/WP11_Presentation_and_Responsive_UI.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP11_Presentation_and_Responsive_UI.md
+@@ -0,0 +1,24 @@
++# WP11 — Presentation & Responsive UI
++
++**Epic:** Presentation & UX | **Priority:** 3 | **Complexity:** Easy
++
++## Intent
++Polished, mobile‑first cards/gallery with availability/MOQ badges and consistent spacing/typography.
++
++## Scope
++- Tailwind utility classes; skeletons; focus rings; prefers‑reduced‑motion
++
++## Stories & AC
++- **Visitor:** “It looks professional and fast.” → **AC:** Lighthouse A11y ≥90; no layout shift.
++- **Owner:** “Just drop it in.” → **AC:** Works without custom CSS.
++
++## Implementation
++- Content‑visibility; image placeholders with fixed ratio
++- Badge palette with AA contrast; legend in docs
++
++## Test Plan
++- Visual regression; Lighthouse budget
++
++## DoD
++- [ ] A11y ≥90; CLS <0.1; skeletons implemented
++- [ ] Badges accurate; styles documented
+diff --git a/WPS/WP12_Internationalization.md b/WPS/WP12_Internationalization.md
+new file mode 100644
+index 0000000..1111111
+--- /dev/null
++++ b/WPS/WP12_Internationalization.md
+@@ -0,0 +1,24 @@
++# WP12 — Internationalization (i18n)
++
++**Epic:** i18n & Currency | **Priority:** 3 | **Complexity:** Medium
++
++## Intent
++Serve UI strings and number/date/currency formats per locale; allow language toggle and persistence.
++
++## Scope
++- ≥2 language packs; auto‑detect; RTL readiness; currency formatting cooperation
++
++## Stories & AC
++- **Visitor:** Switch language → **AC:** All visible strings swap; preference persisted.
++- **Owner:** Add translations easily → **AC:** 98% key coverage check.
++
++## Implementation
++- Resource files (.resx for Blazor); formatter utilities; locale middleware
++- Ensure currency/tax labels sync with WP04
++
++## Test Plan
++- Snapshot tests per locale; manual RTL smoke
++
++## DoD
++- [ ] Packs shipped (e.g., en, fr); toggle present; persisted
++- [ ] 98%+ keys coverage; RTL validated
