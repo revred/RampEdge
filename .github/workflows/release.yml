@@ -1,0 +1,146 @@
+name: Release Management
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a pre-release?'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "push" ]; then
+          # Extract version from tag
+          VERSION=${GITHUB_REF#refs/tags/v}
+          TAG=${GITHUB_REF#refs/tags/}
+        else
+          # Use manual input
+          VERSION=${{ github.event.inputs.version }}
+          TAG="v${VERSION}"
+        fi
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "tag=${TAG}" >> $GITHUB_OUTPUT
+        echo "Version: ${VERSION}"
+        echo "Tag: ${TAG}"
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Update version in project file
+      run: |
+        VERSION=${{ steps.version.outputs.version }}
+        sed -i "s/<Version>.*<\/Version>/<Version>${VERSION}<\/Version>/" ./Maker.RampEdge/Maker.RampEdge.csproj
+
+    - name: Restore and build
+      run: |
+        dotnet restore
+        dotnet build --configuration Release
+
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build
+
+    - name: Pack NuGet package
+      run: dotnet pack ./Maker.RampEdge/Maker.RampEdge.csproj --configuration Release --no-build --output ./packages
+
+    - name: Generate release notes
+      id: release_notes
+      run: |
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        if [ -z "$PREVIOUS_TAG" ]; then
+          NOTES="Initial release of Maker.RampEdge"
+        else
+          NOTES=$(git log --pretty=format:"- %s" ${PREVIOUS_TAG}..HEAD | head -20)
+        fi
+
+        cat > release_notes.md << EOF
+        ## What's Changed
+
+        ${NOTES}
+
+        ## Installation
+
+        \`\`\`bash
+        dotnet add package Maker.RampEdge --version ${{ steps.version.outputs.version }}
+        \`\`\`
+
+        ## Documentation
+
+        - [README](https://github.com/revred/RampEdge/blob/master/Maker.RampEdge/README.md)
+        - [Developer Guide](https://github.com/revred/RampEdge/blob/master/CLAUDE.md)
+
+        **Full Changelog**: https://github.com/revred/RampEdge/compare/${PREVIOUS_TAG}...${{ steps.version.outputs.tag }}
+        EOF
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.tag }}
+        name: Release ${{ steps.version.outputs.version }}
+        body_path: release_notes.md
+        files: ./packages/*.nupkg
+        prerelease: ${{ github.event.inputs.prerelease == 'true' }}
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-to-nuget:
+    name: Publish to NuGet.org
+    runs-on: ubuntu-latest
+    needs: create-release
+    if: ${{ !github.event.inputs.prerelease }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Update version in project file
+      run: |
+        VERSION=${{ needs.create-release.outputs.version }}
+        sed -i "s/<Version>.*<\/Version>/<Version>${VERSION}<\/Version>/" ./Maker.RampEdge/Maker.RampEdge.csproj
+
+    - name: Restore and pack
+      run: |
+        dotnet restore
+        dotnet pack ./Maker.RampEdge/Maker.RampEdge.csproj --configuration Release --output ./packages
+
+    - name: Publish to NuGet
+      run: |
+        dotnet nuget push ./packages/*.nupkg \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate

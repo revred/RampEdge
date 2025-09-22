@@ -1,0 +1,130 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  schedule:
+    - cron: '0 2 * * 1' # Weekly on Monday at 2 AM UTC
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Run .NET security audit
+      run: dotnet list package --vulnerable --include-transitive
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: csharp
+        queries: security-and-quality
+
+    - name: Build for CodeQL
+      run: dotnet build --configuration Release
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:csharp"
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+
+  package-validation:
+    name: Package Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install package validation tool
+      run: dotnet tool install -g Microsoft.DotNet.PackageValidation.Cli
+
+    - name: Restore and build
+      run: |
+        dotnet restore
+        dotnet build --configuration Release
+
+    - name: Pack package
+      run: dotnet pack ./Maker.RampEdge/Maker.RampEdge.csproj --configuration Release --output ./packages
+
+    - name: Validate package
+      run: |
+        for package in ./packages/*.nupkg; do
+          echo "Validating package: $package"
+          package-validation "$package"
+        done
+
+    - name: Check package size
+      run: |
+        for package in ./packages/*.nupkg; do
+          size=$(stat -c%s "$package")
+          echo "Package size: $size bytes"
+          if [ $size -gt 10485760 ]; then # 10MB
+            echo "Warning: Package size exceeds 10MB"
+          fi
+        done
+
+  malware-scan:
+    name: Malware Scanning
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

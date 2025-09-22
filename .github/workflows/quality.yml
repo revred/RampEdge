@@ -1,0 +1,152 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  DOTNET_VERSION: '9.0.x'
+
+jobs:
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache SonarCloud packages
+      uses: actions/cache@v3
+      with:
+        path: ~/.sonar/cache
+        key: ${{ runner.os }}-sonar
+        restore-keys: ${{ runner.os }}-sonar
+
+    - name: Install SonarCloud scanner
+      run: dotnet tool install --global dotnet-sonarscanner
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Begin SonarCloud analysis
+      run: |
+        dotnet sonarscanner begin \
+          /k:"revred_RampEdge" \
+          /o:"revred" \
+          /d:sonar.login="${{ secrets.SONAR_TOKEN }}" \
+          /d:sonar.host.url="https://sonarcloud.io" \
+          /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml" \
+          /d:sonar.coverage.exclusions="**/*.Tests/**,**/TestHelpers.cs,**/TestConfiguration.cs"
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Run tests with coverage
+      run: |
+        dotnet test \
+          --configuration Release \
+          --no-build \
+          --verbosity normal \
+          --collect:"XPlat Code Coverage" \
+          --results-directory ./TestResults/ \
+          -- DataCollectionRunSettings.DataCollectors.DataCollector.Configuration.Format=opencover
+
+    - name: End SonarCloud analysis
+      run: dotnet sonarscanner end /d:sonar.login="${{ secrets.SONAR_TOKEN }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  lint:
+    name: Linting
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Check formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic
+
+    - name: Analyze code
+      run: dotnet build --configuration Release --verbosity normal /p:TreatWarningsAsErrors=true
+
+  documentation:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Check README exists
+      run: |
+        if [ ! -f "Maker.RampEdge/README.md" ]; then
+          echo "README.md is missing!"
+          exit 1
+        fi
+
+    - name: Check CLAUDE.md exists
+      run: |
+        if [ ! -f "CLAUDE.md" ]; then
+          echo "CLAUDE.md is missing!"
+          exit 1
+        fi
+
+    - name: Validate markdown
+      uses: articulate/actions-markdownlint@v1
+      with:
+        config: .markdownlint.json
+        files: '**/*.md'
+        ignore: 'node_modules'
+
+  performance:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore and build
+      run: |
+        dotnet restore
+        dotnet build --configuration Release
+
+    - name: Run performance tests
+      run: |
+        cd Maker.RampEdge.Tests
+        dotnet test --configuration Release --no-build --logger "console;verbosity=detailed" --filter "Category=Performance"
+
+    - name: Package size analysis
+      run: |
+        dotnet pack ./Maker.RampEdge/Maker.RampEdge.csproj --configuration Release --output ./packages
+        echo "Package contents:"
+        for package in ./packages/*.nupkg; do
+          echo "=== $package ==="
+          unzip -l "$package"
+          echo ""
+        done
