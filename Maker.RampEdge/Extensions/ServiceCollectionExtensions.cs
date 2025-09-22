@@ -1,9 +1,12 @@
 using Maker.RampEdge.Configuration;
 using Maker.RampEdge.Http;
+using Maker.RampEdge.Logging;
 using Maker.RampEdge.Services;
 using Maker.RampEdge.Services.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
 
 namespace Maker.RampEdge.Extensions;
 
@@ -25,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITokenStorage, TokenStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
         services.AddSingleton<IProductService, ProductService>();
+        services.AddSingleton<ILogIds, LogIds>();
 
         services.AddTransient<StaticAppHeadersHandler>();
         services.AddTransient(sp => new BearerTokenHandler(
@@ -75,6 +79,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITokenStorage, TokenStorage>();
         services.AddSingleton<IAuthenticationService, AuthenticationService>();
         services.AddSingleton<IProductService, ProductService>();
+        services.AddSingleton<ILogIds, LogIds>();
 
         services.AddTransient<StaticAppHeadersHandler>();
         services.AddTransient(sp => new BearerTokenHandler(

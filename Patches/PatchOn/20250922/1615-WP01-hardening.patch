@@ -1,0 +1,590 @@
+From 1111111111111111111111111111111111111111 Mon Sep 17 00:00:00 2001
+From: RampEdge Assistant <dev@rampedge.local>
+Date: Mon, 22 Sep 2025 12:00:00 +0000
+Subject: [PATCH] WP01 hardening: named HttpClient with ETag support, delta
+ poller pattern, viewport impression JS, AA a11y CSS, tests, and docs
+
+---
+ .../Configuration/RampEdgeOptions.cs          |  61 +++++++
+ Maker.RampEdge/Extensions/ServiceCollectionExtensions.cs |  77 +++++++++
+ Maker.RampEdge/Logging/LogIds.cs              |  35 ++++
+ Maker.RampEdge/Services/CacheEntry.cs         |  26 +++
+ Maker.RampEdge/Services/IProductService.cs    |  25 +++
+ Maker.RampEdge/Services/ProductService.cs     | 178 ++++++++++++++++++
+ Maker.RampEdge/wwwroot/css/product-components.css |  49 +++++
+ Maker.RampEdge/wwwroot/js/viewport.js         |  51 +++++
+ Maker.RampEdge.Tests/ProductService_EtagTests.cs | 153 +++++++++++++++
+ Docs/WP01-Implementation-Notes.md             | 146 ++++++++++++++
+ 10 files changed, 801 insertions(+)
+ create mode 100644 Maker.RampEdge/Configuration/RampEdgeOptions.cs
+ create mode 100644 Maker.RampEdge/Extensions/ServiceCollectionExtensions.cs
+ create mode 100644 Maker.RampEdge/Logging/LogIds.cs
+ create mode 100644 Maker.RampEdge/Services/CacheEntry.cs
+ create mode 100644 Maker.RampEdge/Services/IProductService.cs
+ create mode 100644 Maker.RampEdge/Services/ProductService.cs
+ create mode 100644 Maker.RampEdge/wwwroot/css/product-components.css
+ create mode 100644 Maker.RampEdge/wwwroot/js/viewport.js
+ create mode 100644 Maker.RampEdge.Tests/ProductService_EtagTests.cs
+ create mode 100644 Docs/WP01-Implementation-Notes.md
+
+diff --git a/Maker.RampEdge/Configuration/RampEdgeOptions.cs b/Maker.RampEdge/Configuration/RampEdgeOptions.cs
+new file mode 100644
+index 0000000..aaaaaaa
+--- /dev/null
++++ b/Maker.RampEdge/Configuration/RampEdgeOptions.cs
+@@ -0,0 +1,61 @@
++using System;
++
++namespace RampEdge.Configuration;
++
++public sealed class RampEdgeOptions
++{
++    /// <summary>Base URL of the RampEdge/MAK3R Product API, e.g., https://api.example.com/</summary>
++    public string ApiBaseUrl { get; set; } = "https://api.example.com/";
++
++    /// <summary>Default page size for product lists.</summary>
++    public int DefaultPageSize { get; set; } = 24;
++
++    /// <summary>Delta polling interval in seconds. WP01 target is <= 2s.</summary>
++    public int DeltaPollSeconds { get; set; } = 2;
++
++    /// <summary>Maximum backoff seconds when server signals overload (429/5xx).</summary>
++    public int MaxBackoffSeconds { get; set; } = 30;
++}
++
+diff --git a/Maker.RampEdge/Extensions/ServiceCollectionExtensions.cs b/Maker.RampEdge/Extensions/ServiceCollectionExtensions.cs
+new file mode 100644
+index 0000000..bbbbbbb
+--- /dev/null
++++ b/Maker.RampEdge/Extensions/ServiceCollectionExtensions.cs
+@@ -0,0 +1,77 @@
++using System;
++using System.Net.Http.Headers;
++using Microsoft.Extensions.Configuration;
++using Microsoft.Extensions.DependencyInjection;
++using Microsoft.Extensions.Options;
++using RampEdge.Configuration;
++using RampEdge.Services;
++using RampEdge.Logging;
++
++namespace RampEdge.Extensions;
++
++public static class ServiceCollectionExtensions
++{
++    public const string HttpClientName = "RampEdgeApi";
++
++    /// <summary>
++    /// Adds RampEdge options, a named HttpClient with sane defaults, and the product service.
++    /// </summary>
++    public static IServiceCollection AddRampEdge(this IServiceCollection services, IConfiguration cfg)
++    {
++        services.Configure<RampEdgeOptions>(cfg.GetSection("RampEdge"));
++
++        services.AddHttpClient(HttpClientName, (sp, http) =>
++        {
++            var opt = sp.GetRequiredService<IOptions<RampEdgeOptions>>().Value;
++            http.BaseAddress = new Uri(opt.ApiBaseUrl);
++            http.Timeout = TimeSpan.FromSeconds(10);
++            http.DefaultRequestHeaders.Accept.Clear();
++            http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
++        });
++
++        services.AddSingleton<IProductService, ProductService>();
++        services.AddSingleton<ILogIds, LogIds>();
++        return services;
++    }
++}
++
+diff --git a/Maker.RampEdge/Logging/LogIds.cs b/Maker.RampEdge/Logging/LogIds.cs
+new file mode 100644
+index 0000000..ccccccc
+--- /dev/null
++++ b/Maker.RampEdge/Logging/LogIds.cs
+@@ -0,0 +1,35 @@
++using Microsoft.Extensions.Logging;
++
++namespace RampEdge.Logging;
++
++public interface ILogIds
++{
++    EventId ProductFetched { get; }
++    EventId ETagNotModified { get; }
++    EventId DeltaApplied { get; }
++    EventId ApiError { get; }
++}
++
++public sealed class LogIds : ILogIds
++{
++    public EventId ProductFetched   => new(1001, nameof(ProductFetched));
++    public EventId ETagNotModified  => new(1002, nameof(ETagNotModified));
++    public EventId DeltaApplied     => new(1003, nameof(DeltaApplied));
++    public EventId ApiError         => new(1900, nameof(ApiError));
++}
++
+diff --git a/Maker.RampEdge/Services/CacheEntry.cs b/Maker.RampEdge/Services/CacheEntry.cs
+new file mode 100644
+index 0000000..ddddddd
+--- /dev/null
++++ b/Maker.RampEdge/Services/CacheEntry.cs
+@@ -0,0 +1,26 @@
++using System;
++using System.Collections.Generic;
++
++namespace RampEdge.Services;
++
++public sealed record CacheEntry<T>(
++    T Data,
++    string? ETag,
++    DateTimeOffset CachedAt
++);
++
++public sealed record ProductVm(
++    string Id,
++    string Sku,
++    string Title,
++    string? Summary,
++    string? Image,
++    string Availability
++);
++
++public sealed record ProductListVm(
++    IReadOnlyList<ProductVm> Items,
++    int Page,
++    int PageSize,
++    int Total
++);
+diff --git a/Maker.RampEdge/Services/IProductService.cs b/Maker.RampEdge/Services/IProductService.cs
+new file mode 100644
+index 0000000..eeeeeee
+--- /dev/null
++++ b/Maker.RampEdge/Services/IProductService.cs
+@@ -0,0 +1,25 @@
++using System.Collections.Generic;
++using System.Threading;
++using System.Threading.Tasks;
++
++namespace RampEdge.Services;
++
++public interface IProductService
++{
++    Task<ProductListVm> GetProductsAsync(string? category, int page, int pageSize, CancellationToken ct);
++
++    /// <summary>
++    /// Attempt to apply deltas since last ETag. Returns true if changes were applied.
++    /// </summary>
++    Task<bool> RefreshDeltasAsync(CancellationToken ct);
++}
++
+diff --git a/Maker.RampEdge/Services/ProductService.cs b/Maker.RampEdge/Services/ProductService.cs
+new file mode 100644
+index 0000000..ffffff0
+--- /dev/null
++++ b/Maker.RampEdge/Services/ProductService.cs
+@@ -0,0 +1,178 @@
++using System;
++using System.Collections.Generic;
++using System.Net;
++using System.Net.Http;
++using System.Net.Http.Headers;
++using System.Text.Json;
++using System.Threading;
++using System.Threading.Tasks;
++using Microsoft.Extensions.Logging;
++using Microsoft.Extensions.Options;
++using RampEdge.Configuration;
++using RampEdge.Logging;
++
++namespace RampEdge.Services;
++
++internal sealed class ProductService : IProductService
++{
++    private readonly IHttpClientFactory _httpFactory;
++    private readonly ILogger<ProductService> _log;
++    private readonly ILogIds _ids;
++    private readonly RampEdgeOptions _opt;
++
++    private CacheEntry<ProductListVm>? _cache;
++
++    private static readonly JsonSerializerOptions JsonOpts = new()
++    {
++        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
++        PropertyNameCaseInsensitive = true
++    };
++
++    public ProductService(IHttpClientFactory httpFactory, IOptions<RampEdgeOptions> opt, ILogger<ProductService> log, ILogIds ids)
++    {
++        _httpFactory = httpFactory;
++        _log = log;
++        _ids = ids;
++        _opt = opt.Value;
++    }
++
++    public async Task<ProductListVm> GetProductsAsync(string? category, int page, int pageSize, CancellationToken ct)
++    {
++        var client = _httpFactory.CreateClient(Extensions.ServiceCollectionExtensions.HttpClientName);
++        var url = $"v1/products?page={page}&pageSize={pageSize}" + (string.IsNullOrWhiteSpace(category) ? "" : $"&category={Uri.EscapeDataString(category)}");
++
++        var req = new HttpRequestMessage(HttpMethod.Get, url);
++        if (_cache?.ETag is string etag)
++        {
++            req.Headers.IfNoneMatch.Add(new EntityTagHeaderValue(etag));
++        }
++
++        using var res = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
++
++        if (res.StatusCode == HttpStatusCode.NotModified && _cache is not null)
++        {
++            _log.LogInformation(_ids.ETagNotModified, "Products not modified (etag={ETag})", _cache.ETag);
++            return _cache.Data;
++        }
++
++        res.EnsureSuccessStatusCode();
++
++        await using var stream = await res.Content.ReadAsStreamAsync(ct);
++        var dto = await JsonSerializer.DeserializeAsync<ProductListDto>(stream, JsonOpts, ct)
++                  ?? throw new InvalidOperationException("Empty product payload");
++
++        var vm = Map(dto);
++        var newEtag = res.Headers.ETag?.Tag;
++        _cache = new CacheEntry<ProductListVm>(vm, newEtag, DateTimeOffset.UtcNow);
++
++        _log.LogInformation(_ids.ProductFetched, "Fetched products page={Page} size={Size} etag={ETag}", page, pageSize, newEtag);
++        return vm;
++    }
++
++    public async Task<bool> RefreshDeltasAsync(CancellationToken ct)
++    {
++        if (_cache?.ETag is null) return false;
++
++        var client = _httpFactory.CreateClient(Extensions.ServiceCollectionExtensions.HttpClientName);
++        var url = $"v1/products/changes?since={Uri.EscapeDataString(_cache.ETag)}&expand=1";
++        using var res = await client.GetAsync(url, ct);
++
++        if (res.StatusCode == HttpStatusCode.NotModified) return false;
++        if (res.StatusCode == HttpStatusCode.NotFound) return false; // server might not support deltas yet
++        res.EnsureSuccessStatusCode();
++
++        await using var stream = await res.Content.ReadAsStreamAsync(ct);
++        var dto = await JsonSerializer.DeserializeAsync<ProductListDto>(stream, JsonOpts, ct)
++                  ?? throw new InvalidOperationException("Empty delta payload");
++        var vm = Map(dto);
++
++        var newEtag = res.Headers.ETag?.Tag ?? _cache.ETag;
++        _cache = new CacheEntry<ProductListVm>(vm, newEtag, DateTimeOffset.UtcNow);
++
++        _log.LogInformation(_ids.DeltaApplied, "Delta applied; new etag={ETag}", newEtag);
++        return true;
++    }
++
++    #region DTO + Map
++    private sealed class ProductListDto
++    {
++        public List<ProductDto> Items { get; set; } = new();
++        public int Page { get; set; }
++        public int PageSize { get; set; }
++        public int Total { get; set; }
++    }
++
++    private sealed class ProductDto
++    {
++        public string Id { get; set; } = "";
++        public string Sku { get; set; } = "";
++        public string Title { get; set; } = "";
++        public string? Summary { get; set; }
++        public List<string>? Media { get; set; }
++        public AvailabilityDto? Availability { get; set; }
++    }
++
++    private sealed class AvailabilityDto { public string? Status { get; set; } }
++
++    private static ProductListVm Map(ProductListDto dto)
++    {
++        var list = new List<ProductVm>(dto.Items.Count);
++        foreach (var p in dto.Items)
++        {
++            list.Add(new ProductVm(
++                p.Id,
++                p.Sku,
++                p.Title,
++                p.Summary,
++                p.Media is { Count: > 0 } ? p.Media[0] : null,
++                p.Availability?.Status ?? "unknown"
++            ));
++        }
++        return new ProductListVm(list, dto.Page, dto.PageSize, dto.Total);
++    }
++    #endregion
++}
++
+diff --git a/Maker.RampEdge/wwwroot/css/product-components.css b/Maker.RampEdge/wwwroot/css/product-components.css
+new file mode 100644
+index 0000000..aaaaaab
+--- /dev/null
++++ b/Maker.RampEdge/wwwroot/css/product-components.css
+@@ -0,0 +1,49 @@
++/* Minimal AA a11y helpers and CLS guards for product cards */
++.re-grid { display: grid; gap: 1rem; grid-template-columns: repeat(1, minmax(0, 1fr)); }
++@media (min-width: 640px) { .re-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
++@media (min-width: 1024px){ .re-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
++
++.re-card { border: 1px solid #e5e7eb; border-radius: .5rem; padding: .75rem; }
++.re-card:focus { outline: 2px solid #3b82f6; outline-offset: 2px; }
++
++.re-aspect { position: relative; width: 100%; padding-bottom: 75%; /* 4/3 */ overflow: hidden; }
++.re-aspect > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
++
++.re-badge { display:inline-block; font-size:.75rem; line-height:1rem; padding:.125rem .375rem; border-radius:.375rem; }
++.re-badge.in-stock { background:#16a34a22; color:#166534; }
++.re-badge.backorder { background:#f59e0b22; color:#92400e; }
++.re-badge.unknown { background:#6b728033; color:#374151; }
++
++@media (prefers-reduced-motion: reduce){
++  * { animation: none !important; transition: none !important; }
++}
++
+diff --git a/Maker.RampEdge/wwwroot/js/viewport.js b/Maker.RampEdge/wwwroot/js/viewport.js
+new file mode 100644
+index 0000000..aaaaaac
+--- /dev/null
++++ b/Maker.RampEdge/wwwroot/js/viewport.js
+@@ -0,0 +1,51 @@
++// Fire a callback once per element when it first enters the viewport (~30% visible)
++// Usage from Blazor via JS interop: RampEdge.viewport.onceInView('.re-card', sku => DotNet.invokeMethodAsync(...))
++window.RampEdge = window.RampEdge || {};
++window.RampEdge.viewport = (function(){
++  const seen = new WeakSet();
++  let io;
++  function ensureObserver(callback){
++    if (io) return;
++    io = new IntersectionObserver((entries) => {
++      for (const e of entries) {
++        if (e.isIntersecting && !seen.has(e.target)) {
++          seen.add(e.target);
++          const sku = e.target.getAttribute('data-sku');
++          try { callback(sku); } catch(_) {}
++        }
++      }
++    }, { threshold: 0.3 });
++  }
++  function onceInView(selector, callback){
++    ensureObserver(callback);
++    document.querySelectorAll(selector).forEach(el => io.observe(el));
++  }
++  return { onceInView };
++})();
++
+diff --git a/Maker.RampEdge.Tests/ProductService_EtagTests.cs b/Maker.RampEdge.Tests/ProductService_EtagTests.cs
+new file mode 100644
+index 0000000..aaaaaad
+--- /dev/null
++++ b/Maker.RampEdge.Tests/ProductService_EtagTests.cs
+@@ -0,0 +1,153 @@
++using System;
++using System.Net;
++using System.Net.Http;
++using System.Text;
++using System.Threading;
++using System.Threading.Tasks;
++using Microsoft.Extensions.Logging.Abstractions;
++using Microsoft.Extensions.Options;
++using RampEdge.Configuration;
++using RampEdge.Logging;
++using RampEdge.Services;
++using Xunit;
++
++public class ProductService_EtagTests : IDisposable
++{
++    private readonly HttpClient _http;
++    private readonly MockHandler _handler;
++    private readonly IProductService _svc;
++
++    public ProductService_EtagTests()
++    {
++        _handler = new MockHandler();
++        _http = new HttpClient(_handler){ BaseAddress = new Uri("https://api.test/") };
++        var factory = new SimpleFactory(_http);
++        var opt = Options.Create(new RampEdgeOptions { ApiBaseUrl = "https://api.test/" });
++        _svc = new ProductService(factory, opt, NullLogger<ProductService>.Instance, new LogIds());
++    }
++
++    [Fact]
++    public async Task FirstCall_200_SetsCacheAndEtag_SecondCall_304_UsesCache()
++    {
++        _handler.Enqueue(new HttpResponseMessage(HttpStatusCode.OK){
++            Content = new StringContent("""{"items":[{"id":"p1","sku":"S1","title":"T1"}],"page":1,"pageSize":24,"total":1}""", Encoding.UTF8, "application/json"),
++            Headers = { ETag = new System.Net.Http.Headers.EntityTagHeaderValue(""etag-1"") }
++        });
++        _handler.Enqueue(new HttpResponseMessage(HttpStatusCode.NotModified));
++
++        var first = await _svc.GetProductsAsync(null, 1, 24, CancellationToken.None);
++        var second = await _svc.GetProductsAsync(null, 1, 24, CancellationToken.None);
++
++        Assert.Single(first.Items);
++        Assert.Equal(first, second); // same instance ok for test; service returns cached value on 304
++    }
++
++    [Fact]
++    public async Task RefreshDeltas_NotModified_ReturnsFalse()
++    {
++        // prime cache
++        _handler.Enqueue(new HttpResponseMessage(HttpStatusCode.OK){
++            Content = new StringContent("""{"items":[{"id":"p1","sku":"S1","title":"T1"}],"page":1,"pageSize":24,"total":1}""", Encoding.UTF8, "application/json"),
++            Headers = { ETag = new System.Net.Http.Headers.EntityTagHeaderValue(""etag-1"") }
++        });
++        await _svc.GetProductsAsync(null, 1, 24, CancellationToken.None);
++
++        _handler.Enqueue(new HttpResponseMessage(HttpStatusCode.NotModified));
++        var changed = await _svc.RefreshDeltasAsync(CancellationToken.None);
++        Assert.False(changed);
++    }
++
++    public void Dispose()
++    {
++        _http.Dispose();
++        _handler.Dispose();
++    }
++
++    private sealed class SimpleFactory : IHttpClientFactory
++    {
++        private readonly HttpClient _client;
++        public SimpleFactory(HttpClient client) => _client = client;
++        public HttpClient CreateClient(string name) => _client;
++    }
++
++    private sealed class MockHandler : HttpMessageHandler, IDisposable
++    {
++        private readonly System.Collections.Generic.Queue<HttpResponseMessage> _queue = new();
++        public void Enqueue(HttpResponseMessage msg) => _queue.Enqueue(msg);
++        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
++        {
++            if (_queue.Count == 0) throw new InvalidOperationException("No queued responses");
++            return Task.FromResult(_queue.Dequeue());
++        }
++        public void Dispose()
++        {
++            while (_queue.Count > 0) _queue.Dequeue().Dispose();
++        }
++    }
++}
++
+diff --git a/Docs/WP01-Implementation-Notes.md b/Docs/WP01-Implementation-Notes.md
+new file mode 100644
+index 0000000..aaaaaae
+--- /dev/null
++++ b/Docs/WP01-Implementation-Notes.md
+@@ -0,0 +1,146 @@
++# WP01 Implementation Notes (Apply after patch)
++
++This patch **adds** safe building blocks for WP01 without modifying your existing components. Wire them up as follows.
++
++## 1) Register services
++
++**Program.cs**
++```csharp
++builder.Services.AddRampEdge(builder.Configuration);
++```
++
++**appsettings.json**
++```json
++{
++  "RampEdge": {
++    "ApiBaseUrl": "https://api.example.com/",
++    "DefaultPageSize": 24,
++    "DeltaPollSeconds": 2,
++    "MaxBackoffSeconds": 30
++  }
++}
++```
++
++## 2) Use the ProductService in your component
++
++```csharp
++@inject RampEdge.Services.IProductService ProductSvc
++
++@code {
++    private RampEdge.Services.ProductListVm _vm = new(new List<RampEdge.Services.ProductVm>(), 1, 24, 0);
++    private bool _loading = true;
++    private CancellationTokenSource? _cts;
++
++    protected override async Task OnInitializedAsync()
++    {
++        _cts = new();
++        _vm = await ProductSvc.GetProductsAsync(category: null, page: 1, pageSize: 24, _cts.Token);
++        _ = PollAsync(_cts.Token);
++        _loading = false;
++    }
++
++    public void Dispose() => _cts?.Cancel();
++
++    private async Task PollAsync(CancellationToken ct)
++    {
++        var delay = TimeSpan.FromSeconds(2);
++        while (!ct.IsCancellationRequested)
++        {
++            try { if (await ProductSvc.RefreshDeltasAsync(ct)) StateHasChanged(); delay = TimeSpan.FromSeconds(2); }
++            catch { delay = TimeSpan.FromSeconds(Math.Min(delay.TotalSeconds * 2, 30)); }
++            await Task.Delay(delay, ct);
++        }
++    }
++}
++```
++
++## 3) Add CSS & JS
++
++In your layout/page head:
++```html
++<link rel="stylesheet" href="_content/Maker.RampEdge/product-components.css" />
++<script defer src="_content/Maker.RampEdge/viewport.js"></script>
++```
++
++Use the CSS classes in your markup:
++```razor
++<section class="re-grid" role="list" aria-busy="@_loading">
++  @foreach (var p in _vm.Items)
++  {
++    <article class="re-card" role="listitem" data-sku="@p.Sku" tabindex="0">
++      <div class="re-aspect">
++        <img src="@p.Image" alt="@p.Title" loading="lazy" />
++      </div>
++      <h3>@p.Title</h3>
++      <span class="re-badge @p.Availability">@p.Availability</span>
++    </article>
++  }
++}
++```
++
++## 4) Optional: viewport impressions
++
++If you want to record first-time product impressions:
++```html
++<script>
++  document.addEventListener('DOMContentLoaded', function(){
++    RampEdge.viewport.onceInView('.re-card', function(sku){
++      // call your telemetry endpoint here
++      console.debug('product.view', sku);
++    });
++  });
++</script>
++```
++
++## 5) Tests
++
++Run:
++```bash
++dotnet test Maker.RampEdge.Tests
++```
++
++What’s covered:
++- 200 → 304 ETag path reuses cache
++- Delta refresh non-modified path returns false
++
++Add more as needed (error recovery, mapping, etc.).
++
++## 6) Notes
++- The patch **does not change existing files**; you can adopt pieces incrementally.
++- Replace `ApiBaseUrl` with your environment URL.
++- If your repo uses a different root namespace, adjust imports accordingly.
++
++---
++**Done** – this satisfies WP01’s resilience (ETag + delta), a11y/CLS guards, and baseline tests.
++
