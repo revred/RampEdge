@@ -1,0 +1,10 @@
+{
+  "tokens": [
+    {
+      "token": "tok_public_read",
+      "label": "Public Read",
+      "scopes": "read"
+    },
+    { "token": "tok_hippohex_demo", "label": "HippoHex Reseller", "scopes": "marketplace:HIPPOHEX-UK,pricing:quote,read" }
+  ]
+}

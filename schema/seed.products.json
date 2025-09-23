@@ -1,0 +1,29 @@
+[
+  {
+    "id": "P-AXLE-001",
+    "sku": "AXLE-001",
+    "title": "Precision Axle 14mm",
+    "kind": "part",
+    "content": { "summary": "Hardened steel axle for OEM assemblies", "media": [] },
+    "specs": { "od_mm": 14, "length_mm": 250, "material": "EN24T" },
+    "pricing": { "list": 29.9, "currency": "GBP" }
+  },
+  {
+    "id": "P-BRG-6202",
+    "sku": "BRG-6202",
+    "title": "Ball Bearing 6202",
+    "kind": "part",
+    "content": { "summary": "Deep groove radial bearing", "media": [] },
+    "specs": { "id_mm": 15, "od_mm": 35, "width_mm": 11 },
+    "pricing": { "list": 3.2, "currency": "GBP" }
+  },
+  {
+    "id": "S-MACH-SETUP",
+    "sku": "SERV-SETUP",
+    "title": "Machine Setup Service",
+    "kind": "service",
+    "content": { "summary": "Initial setup and calibration for CNC cell", "media": [] },
+    "specs": { "hours": 4, "engineer_grade": "Senior" },
+    "pricing": { "list": 120.0, "currency": "GBP" }
+  }
+]

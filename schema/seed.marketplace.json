@@ -1,0 +1,10 @@
+{
+  "exports": [
+    {
+      "id": "MKT-HIPPOHEX-UK",
+      "reseller_code": "HIPPOHEX-UK",
+      "skus": ["AXLE-001", "BRG-6202"],
+      "token": "tok_hippohex_demo"
+    }
+  ]
+}

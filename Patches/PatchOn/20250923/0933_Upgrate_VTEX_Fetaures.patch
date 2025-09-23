@@ -1,0 +1,892 @@
+diff --git a/api/Program.cs b/api/Program.cs
+new file mode 100644
+index 0000000..2b1a9e1
+--- /dev/null
++++ b/api/Program.cs
+@@ -0,0 +1,247 @@
++using Microsoft.Data.Sqlite;
++using System.Text.Json;
++using System.Text.Json.Serialization;
++using System.Text.RegularExpressions;
++
++var builder = WebApplication.CreateBuilder(args);
++
++builder.Services.AddSingleton(new JsonSerializerOptions
++{
++    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
++    WriteIndented = true,
++    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
++});
++
++var dbPath = Path.Combine(AppContext.BaseDirectory, "..", "rampedge.db");
++Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
++builder.Services.AddSingleton(new SqliteConnectionStringBuilder { DataSource = dbPath }.ToString());
++
++var app = builder.Build();
++
++// Ensure DB & tables
++using (var conn = new SqliteConnection(app.Services.GetRequiredService<string>()))
++{
++    conn.Open();
++    var cmd = conn.CreateCommand();
++    cmd.CommandText = @"
++CREATE TABLE IF NOT EXISTS products(
++  id TEXT PRIMARY KEY,
++  sku TEXT UNIQUE,
++  title TEXT,
++  kind TEXT,
++  data TEXT,
++  created_at TEXT DEFAULT (datetime('now'))
++);
++CREATE TABLE IF NOT EXISTS discount_policies(
++  id TEXT PRIMARY KEY,
++  name TEXT,
++  active INTEGER,
++  rules TEXT
++);
++CREATE TABLE IF NOT EXISTS marketplace_exports(
++  id TEXT PRIMARY KEY,
++  reseller_code TEXT,
++  skus TEXT,
++  token TEXT
++);
++CREATE TABLE IF NOT EXISTS orders(
++  id TEXT PRIMARY KEY,
++  customer_ref TEXT,
++  items TEXT,
++  total REAL,
++  status TEXT,
++  timeline TEXT,
++  created_at TEXT DEFAULT (datetime('now'))
++);
++CREATE TABLE IF NOT EXISTS crm_events(
++  id TEXT PRIMARY KEY,
++  account TEXT,
++  kind TEXT,
++  data TEXT,
++  ts TEXT DEFAULT (datetime('now'))
++);
++CREATE TABLE IF NOT EXISTS api_tokens(
++  token TEXT PRIMARY KEY,
++  label TEXT,
++  scopes TEXT
++);
++";
++    cmd.ExecuteNonQuery();
++}
++
++app.MapGet("/api/ok", () => Results.Json(new { ok = true }));
++
++// -------------------
++// Helpers
++// -------------------
++static string Json(object o, JsonSerializerOptions jso) => JsonSerializer.Serialize(o, jso);
++static T? FromJson<T>(string s) => JsonSerializer.Deserialize<T>(s);
++
++static bool HasScope(HttpRequest req, string needed, string? tokenScopes)
++{
++    if (string.IsNullOrWhiteSpace(needed)) return true;
++    if (string.IsNullOrWhiteSpace(tokenScopes)) return false;
++    var scopes = tokenScopes.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
++    if (needed.EndsWith(":*"))
++    {
++        var prefix = needed[..^2];
++        return scopes.Any(s => s.StartsWith(prefix));
++    }
++    return scopes.Contains(needed);
++}
++
++async Task<(bool ok, string? scopes)> ValidateToken(HttpRequest req, SqliteConnection conn)
++{
++    var auth = req.Headers.Authorization.ToString();
++    if (string.IsNullOrWhiteSpace(auth) || !auth.StartsWith("Bearer ")) return (false, null);
++    var token = auth["Bearer ".Length..].Trim();
++    var get = conn.CreateCommand();
++    get.CommandText = "SELECT scopes FROM api_tokens WHERE token=@t";
++    get.Parameters.AddWithValue("@t", token);
++    var scopes = (string?)await get.ExecuteScalarAsync();
++    return (scopes != null, scopes);
++}
++
++// -------------------
++// Products
++// -------------------
++app.MapGet("/api/products", async (HttpRequest req, string connStr) =>
++{
++    var q = req.Query["search"].ToString();
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var cmd = conn.CreateCommand();
++    if (string.IsNullOrWhiteSpace(q))
++    {
++        cmd.CommandText = "SELECT id, sku, title, kind, data FROM products LIMIT 200";
++    }
++    else
++    {
++        cmd.CommandText = "SELECT id, sku, title, kind, data FROM products WHERE sku LIKE @q OR title LIKE @q LIMIT 200";
++        cmd.Parameters.AddWithValue("@q", $"%{q}%");
++    }
++    using var r = await cmd.ExecuteReaderAsync();
++    var list = new List<object>();
++    while (await r.ReadAsync())
++    {
++        list.Add(new {
++            id = r.GetString(0), sku = r.GetString(1), title = r.GetString(2), kind = r.GetString(3),
++            content = FromJson<JsonElement>(r.GetString(4)).GetProperty("content"),
++            specs = FromJson<JsonElement>(r.GetString(4)).GetProperty("specs"),
++            pricing = FromJson<JsonElement>(r.GetString(4)).GetProperty("pricing")
++        });
++    }
++    return Results.Json(list);
++});
++
++app.MapGet("/api/products/{id}", async (string id, string connStr) =>
++{
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var cmd = conn.CreateCommand();
++    cmd.CommandText = "SELECT id, sku, title, kind, data FROM products WHERE id=@id";
++    cmd.Parameters.AddWithValue("@id", id);
++    using var r = await cmd.ExecuteReaderAsync();
++    if (!await r.ReadAsync()) return Results.NotFound();
++    var data = FromJson<JsonElement>(r.GetString(4));
++    return Results.Json(new {
++        id = r.GetString(0), sku = r.GetString(1), title = r.GetString(2), kind = r.GetString(3),
++        content = data.GetProperty("content"),
++        specs = data.GetProperty("specs"),
++        pricing = data.GetProperty("pricing")
++    });
++});
++
++app.MapPost("/api/products", async (HttpRequest req, string connStr, JsonSerializerOptions jso) =>
++{
++    using var doc = await JsonDocument.ParseAsync(req.Body);
++    var root = doc.RootElement;
++    string id = root.GetProperty("id").GetString()!;
++    string sku = root.GetProperty("sku").GetString()!;
++    string title = root.GetProperty("title").GetString()!;
++    string kind = root.GetProperty("kind").GetString()!;
++    // validate minimal presence
++    if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(sku))
++        return Results.BadRequest(new { error = "id and sku required" });
++
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var up = conn.CreateCommand();
++    up.CommandText = @"INSERT INTO products(id, sku, title, kind, data)
++                       VALUES(@id,@sku,@title,@kind,@data)
++                       ON CONFLICT(id) DO UPDATE SET sku=@sku,title=@title,kind=@kind,data=@data";
++    up.Parameters.AddWithValue("@id", id);
++    up.Parameters.AddWithValue("@sku", sku);
++    up.Parameters.AddWithValue("@title", title);
++    up.Parameters.AddWithValue("@kind", kind);
++    up.Parameters.AddWithValue("@data", root.GetRawText());
++    await up.ExecuteNonQueryAsync();
++    return Results.Json(new { ok = true });
++});
++
++// -------------------
++// Pricing / Quote
++// -------------------
++record VolumeRule(int min, decimal pct);
++record SegmentRule(string code, decimal pct);
++record Rules(VolumeRule[]? volume, SegmentRule[]? segments);
++
++static decimal QuoteEval(decimal list, int qty, string? segment, Rules rules)
++{
++    decimal pct = 0m;
++    if (rules.volume != null)
++        foreach (var v in rules.volume)
++            if (qty >= v.min) pct = Math.Max(pct, v.pct);
++    if (!string.IsNullOrWhiteSpace(segment) && rules.segments != null)
++        foreach (var s in rules.segments)
++            if (string.Equals(s.code, segment, StringComparison.OrdinalIgnoreCase))
++                pct = Math.Max(pct, s.pct);
++    return Math.Round(list * (1 - pct / 100m), 2);
++}
++
++app.MapGet("/api/pricing/quote", async (HttpRequest req, string connStr) =>
++{
++    var sku = req.Query["sku"].ToString();
++    var qty = int.TryParse(req.Query["qty"], out var qv) ? qv : 1;
++    var segment = req.Query["segment"].ToString();
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var p = conn.CreateCommand();
++    p.CommandText = "SELECT data FROM products WHERE sku=@sku";
++    p.Parameters.AddWithValue("@sku", sku);
++    var pdata = (string?)await p.ExecuteScalarAsync();
++    if (pdata is null) return Results.NotFound(new { error = "sku not found" });
++    var pjson = FromJson<JsonElement>(pdata);
++    var list = pjson.GetProperty("pricing").GetProperty("list").GetDecimal();
++    var currency = pjson.GetProperty("pricing").GetProperty("currency").GetString()!;
++
++    var d = conn.CreateCommand();
++    d.CommandText = "SELECT rules FROM discount_policies WHERE active=1 LIMIT 1";
++    var rulesStr = (string?)await d.ExecuteScalarAsync();
++    var rules = rulesStr != null ? FromJson<Rules>(rulesStr)! : new Rules(null, null);
++    var final = QuoteEval(list, qty, segment, rules);
++
++    return Results.Json(new { sku, listPrice = list, discountPct = Math.Round(100m * (list - final) / (list == 0 ? 1 : list), 2), finalPrice = final, currency });
++});
++
++// -------------------
++// Marketplace Catalog
++// -------------------
++app.MapGet("/api/marketplace/catalog", async (HttpRequest req, string connStr) =>
++{
++    var reseller = req.Query["reseller"].ToString();
++    if (string.IsNullOrWhiteSpace(reseller)) return Results.BadRequest(new { error = "reseller required" });
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    // token check
++    var (ok, scopes) = await ValidateToken(req, conn);
++    if (!ok || !HasScope(req, $"marketplace:{reseller}", scopes)) return Results.Unauthorized();
++
++    var get = conn.CreateCommand();
++    get.CommandText = "SELECT skus FROM marketplace_exports WHERE reseller_code=@r";
++    get.Parameters.AddWithValue("@r", reseller);
++    var skusJson = (string?)await get.ExecuteScalarAsync();
++    if (skusJson is null) return Results.NotFound(new { error = "reseller not configured" });
++    var skus = FromJson<string[]>(skusJson) ?? Array.Empty<string>();
++
++    var listCmd = conn.CreateCommand();
++    listCmd.CommandText = $"SELECT id, sku, title, kind, data FROM products WHERE sku IN ({string.Join(",", skus.Select((_,i)=>$"@s{i}"))})";
++    for (int i=0;i<skus.Length;i++) listCmd.Parameters.AddWithValue($"@s{i}", skus[i]);
++    using var r = await listCmd.ExecuteReaderAsync();
++    var items = new List<object>();
++    while (await r.ReadAsync())
++    {
++        var data = FromJson<JsonElement>(r.GetString(4));
++        items.Add(new { id=r.GetString(0), sku=r.GetString(1), title=r.GetString(2), kind=r.GetString(3),
++            content=data.GetProperty("content"), specs=data.GetProperty("specs"), pricing=data.GetProperty("pricing") });
++    }
++    return Results.Json(items);
++});
++
++// -------------------
++// Orders + Timeline
++// -------------------
++app.MapPost("/api/orders", async (HttpRequest req, string connStr) =>
++{
++    using var doc = await JsonDocument.ParseAsync(req.Body);
++    var root = doc.RootElement;
++    var id = root.GetProperty("id").GetString()!;
++    var cust = root.GetProperty("customerRef").GetString()!;
++    var items = root.GetProperty("items").GetRawText();
++    var total = root.TryGetProperty("total", out var t) ? t.GetDecimal() : 0m;
++    var timeline = JsonSerializer.Serialize(new[]{ new { ts=DateTime.UtcNow.ToString("o"), eventName="created", meta=(object?)null }});
++
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var ins = conn.CreateCommand();
++    ins.CommandText = @"INSERT INTO orders(id, customer_ref, items, total, status, timeline)
++                        VALUES(@i,@c,@it,@tot,'new',@tl)";
++    ins.Parameters.AddWithValue("@i", id);
++    ins.Parameters.AddWithValue("@c", cust);
++    ins.Parameters.AddWithValue("@it", items);
++    ins.Parameters.AddWithValue("@tot", total);
++    ins.Parameters.AddWithValue("@tl", timeline);
++    await ins.ExecuteNonQueryAsync();
++    return Results.Json(new { ok = true, id });
++});
++
++app.MapGet("/api/orders/{id}", async (string id, string connStr) =>
++{
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var cmd = conn.CreateCommand();
++    cmd.CommandText = "SELECT id, customer_ref, items, total, status, timeline FROM orders WHERE id=@i";
++    cmd.Parameters.AddWithValue("@i", id);
++    using var r = await cmd.ExecuteReaderAsync();
++    if (!await r.ReadAsync()) return Results.NotFound();
++    return Results.Json(new {
++        id=r.GetString(0), customerRef=r.GetString(1),
++        items=FromJson<JsonElement>(r.GetString(2)),
++        total=r.GetDouble(3), status=r.GetString(4),
++        timeline=FromJson<JsonElement>(r.GetString(5))
++    });
++});
++
++app.MapPost("/api/orders/{id}/event", async (string id, HttpRequest req, string connStr) =>
++{
++    using var doc = await JsonDocument.ParseAsync(req.Body);
++    var evt = doc.RootElement.GetProperty("event").GetString()!;
++    var meta = doc.RootElement.TryGetProperty("meta", out var m) ? m.GetRawText() : "null";
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    // read timeline
++    var get = conn.CreateCommand();
++    get.CommandText = "SELECT timeline FROM orders WHERE id=@i";
++    get.Parameters.AddWithValue("@i", id);
++    var tlStr = (string?)await get.ExecuteScalarAsync();
++    if (tlStr is null) return Results.NotFound();
++    var list = FromJson<List<JsonElement>>(tlStr) ?? new();
++    var newEvent = JsonSerializer.Deserialize<JsonElement>($@"{{""ts"":""{DateTime.UtcNow:o}"",""eventName"":""{evt}"",""meta"":{meta}}}");
++    list.Add(newEvent);
++    var upd = conn.CreateCommand();
++    upd.CommandText = "UPDATE orders SET status=@s, timeline=@t WHERE id=@i";
++    upd.Parameters.AddWithValue("@s", evt);
++    upd.Parameters.AddWithValue("@t", JsonSerializer.Serialize(list));
++    upd.Parameters.AddWithValue("@i", id);
++    await upd.ExecuteNonQueryAsync();
++    return Results.Json(new { ok = true });
++});
++
++// -------------------
++// Checkout (stub)
++// -------------------
++app.MapPost("/api/checkout/session", async (HttpRequest req) =>
++{
++    using var doc = await JsonDocument.ParseAsync(req.Body);
++    var orderId = doc.RootElement.GetProperty("orderId").GetString()!;
++    // In real life, generate Stripe/A2A link. For MVP return mock URL.
++    return Results.Json(new { paymentUrl = $"https://example.test/pay/{orderId}" });
++});
++
++// -------------------
++// CRM
++// -------------------
++app.MapPost("/api/crm/events", async (HttpRequest req, string connStr) =>
++{
++    using var doc = await JsonDocument.ParseAsync(req.Body);
++    var id = doc.RootElement.GetProperty("id").GetString()!;
++    var account = doc.RootElement.GetProperty("account").GetString()!;
++    var kind = doc.RootElement.GetProperty("kind").GetString()!;
++    var data = doc.RootElement.GetProperty("data").GetRawText();
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var ins = conn.CreateCommand();
++    ins.CommandText = "INSERT INTO crm_events(id, account, kind, data) VALUES(@i,@a,@k,@d)";
++    ins.Parameters.AddWithValue("@i", id);
++    ins.Parameters.AddWithValue("@a", account);
++    ins.Parameters.AddWithValue("@k", kind);
++    ins.Parameters.AddWithValue("@d", data);
++    await ins.ExecuteNonQueryAsync();
++    return Results.Json(new { ok = true });
++});
++
++app.MapGet("/api/crm/events", async (HttpRequest req, string connStr) =>
++{
++    var account = req.Query["account"].ToString();
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var cmd = conn.CreateCommand();
++    if (!string.IsNullOrWhiteSpace(account))
++    {
++        cmd.CommandText = "SELECT id, account, kind, data, ts FROM crm_events WHERE account=@a ORDER BY ts DESC LIMIT 500";
++        cmd.Parameters.AddWithValue("@a", account);
++    }
++    else
++    {
++        cmd.CommandText = "SELECT id, account, kind, data, ts FROM crm_events ORDER BY ts DESC LIMIT 500";
++    }
++    using var r = await cmd.ExecuteReaderAsync();
++    var list = new List<object>();
++    while (await r.ReadAsync())
++    {
++        list.Add(new {
++            id=r.GetString(0), account=r.GetString(1), kind=r.GetString(2),
++            data=FromJson<JsonElement>(r.GetString(3)), ts=r.GetString(4)
++        });
++    }
++    return Results.Json(list);
++});
++
++// -------------------
++// Analytics (views simulated via queries)
++// -------------------
++app.MapGet("/api/analytics/price-perf", async (HttpRequest req, string connStr) =>
++{
++    var sku = req.Query["sku"].ToString();
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    // For MVP, compute trivial aggregates from orders/items
++    var cmd = conn.CreateCommand();
++    cmd.CommandText = @"SELECT o.created_at, json_extract(it.value,'$.sku') as sku,
++       json_extract(it.value,'$.price') as price, json_extract(it.value,'$.qty') as qty
++       FROM orders o, json_each(o.items) it
++       WHERE (@sku='' OR sku=@sku)";
++    cmd.Parameters.AddWithValue("@sku", sku ?? "");
++    using var r = await cmd.ExecuteReaderAsync();
++    var rows = new List<object>();
++    while (await r.ReadAsync())
++    {
++        rows.Add(new { ts=r.GetString(0), sku=r.GetString(1), price=r.GetDouble(2), qty=r.GetInt32(3) });
++    }
++    return Results.Json(new { rows });
++});
++
++app.MapGet("/api/analytics/crm-heatmap", async (HttpRequest req, string connStr) =>
++{
++    var account = req.Query["account"].ToString();
++    using var conn = new SqliteConnection(connStr);
++    await conn.OpenAsync();
++    var cmd = conn.CreateCommand();
++    cmd.CommandText = @"SELECT account, COUNT(*) as touches
++                        FROM crm_events
++                        WHERE (@a='' OR account=@a)
++                        GROUP BY account
++                        ORDER BY touches DESC";
++    cmd.Parameters.AddWithValue("@a", account ?? "");
++    using var r = await cmd.ExecuteReaderAsync();
++    var list = new List<object>();
++    while (await r.ReadAsync())
++    {
++        list.Add(new { account = r.GetString(0), touches = r.GetInt32(1) });
++    }
++    return Results.Json(list);
++});
++
++app.Run();
+diff --git a/sdk/index.ts b/sdk/index.ts
+new file mode 100644
+index 0000000..e5f0b33
+--- /dev/null
++++ b/sdk/index.ts
+@@ -0,0 +1,118 @@
++export type QuoteResult = { sku:string; listPrice:number; discountPct:number; finalPrice:number; currency:string };
++export type Product = { id:string; sku:string; title:string; kind:'part'|'service'; content:any; specs:any; pricing:{list:number; currency:string} };
++export type Order = { id:string; customerRef:string; items:{sku:string; qty:number; price:number}[]; total:number; status:string; timeline:any[] };
++
++async function req(path:string, init?:RequestInit) {
++  const r = await fetch(path, { headers: { "Content-Type":"application/json", ...(init?.headers||{}) }, ...init });
++  if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
++  return r.json();
++}
++
++export const listProducts = (q?:string):Promise<Product[]> =>
++  req(`/api/products${q?`?search=${encodeURIComponent(q)}`:''}`);
++
++export const getProduct = (id:string):Promise<Product> =>
++  req(`/api/products/${id}`);
++
++export const upsertProduct = (p:Product):Promise<any> =>
++  req(`/api/products`, { method:'POST', body: JSON.stringify(p) });
++
++export const quote = (sku:string, qty:number, segment?:string):Promise<QuoteResult> =>
++  req(`/api/pricing/quote?sku=${encodeURIComponent(sku)}&qty=${qty}&segment=${encodeURIComponent(segment||'')}`);
++
++export const marketplaceCatalog = (reseller:string, token:string):Promise<Product[]> =>
++  req(`/api/marketplace/catalog?reseller=${encodeURIComponent(reseller)}`, { headers: { Authorization:`Bearer ${token}` }});
++
++export const createOrder = (order:Order):Promise<any> =>
++  req(`/api/orders`, { method:'POST', body: JSON.stringify(order) });
++
++export const getOrder = (id:string):Promise<Order> =>
++  req(`/api/orders/${encodeURIComponent(id)}`);
++
++export const appendOrderEvent = (id:string, eventName:string, meta?:any):Promise<any> =>
++  req(`/api/orders/${encodeURIComponent(id)}/event`, { method:'POST', body: JSON.stringify({ event: eventName, meta }) });
++
++export const createCheckoutSession = (orderId:string):Promise<{paymentUrl:string}> =>
++  req(`/api/checkout/session`, { method:'POST', body: JSON.stringify({ orderId }) });
++
++export const logCrmEvent = (id:string, account:string, kind:string, data:any):Promise<any> =>
++  req(`/api/crm/events`, { method:'POST', body: JSON.stringify({ id, account, kind, data }) });
++
++export const listCrmEvents = (account?:string):Promise<any[]> =>
++  req(`/api/crm/events${account?`?account=${encodeURIComponent(account)}`:''}`);
+diff --git a/schema/seed.products.json b/schema/seed.products.json
+new file mode 100644
+index 0000000..5b4a0d2
+--- /dev/null
++++ b/schema/seed.products.json
+@@ -0,0 +1,132 @@
++[
++  {
++    "id": "P-AXLE-001",
++    "sku": "AXLE-001",
++    "title": "Precision Axle 14mm",
++    "kind": "part",
++    "content": { "summary": "Hardened steel axle for OEM assemblies", "media": [] },
++    "specs": { "od_mm": 14, "length_mm": 250, "material": "EN24T" },
++    "pricing": { "list": 29.9, "currency": "GBP" }
++  },
++  {
++    "id": "P-BRG-6202",
++    "sku": "BRG-6202",
++    "title": "Ball Bearing 6202",
++    "kind": "part",
++    "content": { "summary": "Deep groove radial bearing", "media": [] },
++    "specs": { "id_mm": 15, "od_mm": 35, "width_mm": 11 },
++    "pricing": { "list": 3.2, "currency": "GBP" }
++  },
++  {
++    "id": "S-MACH-SETUP",
++    "sku": "SERV-SETUP",
++    "title": "Machine Setup Service",
++    "kind": "service",
++    "content": { "summary": "Initial setup and calibration for CNC cell", "media": [] },
++    "specs": { "hours": 4, "engineer_grade": "Senior" },
++    "pricing": { "list": 120.0, "currency": "GBP" }
++  }
++]
+diff --git a/schema/seed.discounts.json b/schema/seed.discounts.json
+new file mode 100644
+index 0000000..3c6d8f1
+--- /dev/null
++++ b/schema/seed.discounts.json
+@@ -0,0 +1,20 @@
++{
++  "policies": [
++    {
++      "id": "POLICY-DEFAULT",
++      "name": "Default Volume/Segment",
++      "active": 1,
++      "rules": {
++        "volume": [
++          { "min": 10, "pct": 5 },
++          { "min": 25, "pct": 10 }
++        ],
++        "segments": [
++          { "code": "reseller", "pct": 12 },
++          { "code": "vip", "pct": 7 }
++        ]
++      }
++    }
++  ]
++}
+diff --git a/schema/seed.marketplace.json b/schema/seed.marketplace.json
+new file mode 100644
+index 0000000..f1c2a44
+--- /dev/null
++++ b/schema/seed.marketplace.json
+@@ -0,0 +1,14 @@
++{
++  "exports": [
++    {
++      "id": "MKT-HIPPOHEX-UK",
++      "reseller_code": "HIPPOHEX-UK",
++      "skus": ["AXLE-001", "BRG-6202"],
++      "token": "tok_hippohex_demo"
++    }
++  ]
++}
+diff --git a/schema/seed.tokens.json b/schema/seed.tokens.json
+new file mode 100644
+index 0000000..a1e6f92
+--- /dev/null
++++ b/schema/seed.tokens.json
+@@ -0,0 +1,12 @@
++{
++  "tokens": [
++    {
++      "token": "tok_public_read",
++      "label": "Public Read",
++      "scopes": "read"
++    },
++    { "token": "tok_hippohex_demo", "label": "HippoHex Reseller", "scopes": "marketplace:HIPPOHEX-UK,pricing:quote,read" }
++  ]
++}
+diff --git a/ops/seed.sh b/ops/seed.sh
+new file mode 100755
+index 0000000..a2a9d55
+--- /dev/null
++++ b/ops/seed.sh
+@@ -0,0 +1,108 @@
++#!/usr/bin/env bash
++set -euo pipefail
++
++ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
++DB="$ROOT/rampedge.db"
++
++echo "Seeding SQLite at $DB"
++
++sqlite3 "$DB" "PRAGMA journal_mode=WAL;"
++
++echo "Importing products..."
++node - <<'NODE'
++const fs = require('fs');
++const sqlite3 = require('sqlite3').verbose();
++const path = require('path');
++const root = path.resolve(__dirname, '..');
++const db = new sqlite3.Database(path.join(root,'rampedge.db'));
++const products = JSON.parse(fs.readFileSync(path.join(root,'schema','seed.products.json'),'utf8'));
++db.serialize(()=>{
++  const stmt = db.prepare("INSERT OR REPLACE INTO products(id,sku,title,kind,data) VALUES(?,?,?,?,?)");
++  for (const p of products) stmt.run(p.id, p.sku, p.title, p.kind, JSON.stringify(p));
++  stmt.finalize();
++});
++db.close();
++NODE
++
++echo "Importing discount policies..."
++node - <<'NODE'
++const fs = require('fs');
++const sqlite3 = require('sqlite3').verbose();
++const path = require('path');
++const root = path.resolve(__dirname, '..');
++const db = new sqlite3.Database(path.join(root,'rampedge.db'));
++const conf = JSON.parse(fs.readFileSync(path.join(root,'schema','seed.discounts.json'),'utf8'));
++db.serialize(()=>{
++  const stmt = db.prepare("INSERT OR REPLACE INTO discount_policies(id,name,active,rules) VALUES(?,?,?,?)");
++  for (const p of conf.policies) stmt.run(p.id, p.name, p.active, JSON.stringify(p.rules));
++  stmt.finalize();
++});
++db.close();
++NODE
++
++echo "Importing marketplace exports..."
++node - <<'NODE'
++const fs = require('fs');
++const sqlite3 = require('sqlite3').verbose();
++const path = require('path');
++const root = path.resolve(__dirname, '..');
++const db = new sqlite3.Database(path.join(root,'rampedge.db'));
++const conf = JSON.parse(fs.readFileSync(path.join(root,'schema','seed.marketplace.json'),'utf8'));
++db.serialize(()=>{
++  const stmt = db.prepare("INSERT OR REPLACE INTO marketplace_exports(id,reseller_code,skus,token) VALUES(?,?,?,?)");
++  for (const e of conf.exports) stmt.run(e.id, e.reseller_code, JSON.stringify(e.skus), e.token);
++  stmt.finalize();
++});
++db.close();
++NODE
++
++echo "Importing tokens..."
++node - <<'NODE'
++const fs = require('fs');
++const sqlite3 = require('sqlite3').verbose();
++const path = require('path');
++const root = path.resolve(__dirname, '..');
++const db = new sqlite3.Database(path.join(root,'rampedge.db'));
++const conf = JSON.parse(fs.readFileSync(path.join(root,'schema','seed.tokens.json'),'utf8'));
++db.serialize(()=>{
++  const stmt = db.prepare("INSERT OR REPLACE INTO api_tokens(token,label,scopes) VALUES(?,?,?)");
++  for (const t of conf.tokens) stmt.run(t.token, t.label, t.scopes);
++  stmt.finalize();
++});
++db.close();
++NODE
++
++echo "Done."
++echo ""
++echo "Demo tokens:"
++echo "  - Public Read: tok_public_read"
++echo "  - HippoHex Reseller: tok_hippohex_demo (scopes: marketplace:HIPPOHEX-UK,pricing:quote,read)"
++echo ""
++echo "Try:"
++echo "  curl http://localhost:5000/api/ok"
++echo "  curl http://localhost:5000/api/products"
++echo "  curl 'http://localhost:5000/api/pricing/quote?sku=AXLE-001&qty=12&segment=reseller'"
++echo "  curl -H 'Authorization: Bearer tok_hippohex_demo' 'http://localhost:5000/api/marketplace/catalog?reseller=HIPPOHEX-UK'"
+diff --git a/ops/seed.ps1 b/ops/seed.ps1
+new file mode 100644
+index 0000000..a0d1234
+--- /dev/null
++++ b/ops/seed.ps1
+@@ -0,0 +1,75 @@
++Set-StrictMode -Version Latest
++$ErrorActionPreference = "Stop"
++
++$root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
++$db = Join-Path $root "rampedge.db"
++
++Write-Host "Seeding SQLite at $db"
++
++sqlite3 $db "PRAGMA journal_mode=WAL;"
++
++function Import-JsonTable {
++  param($JsonPath, $Table, $InsertSql, $Map)
++  $json = Get-Content $JsonPath -Raw | ConvertFrom-Json
++  $dbp = $db.Replace("\","/")
++  foreach ($row in $json) {
++    $values = & $Map $row
++    $params = $values -join "','"
++    $sql = $InsertSql -f $params
++    sqlite3 $db "$sql"
++  }
++}
++
++# Products
++$prod = Join-Path $root "schema\seed.products.json"
++$j = Get-Content $prod -Raw | ConvertFrom-Json
++foreach ($p in $j) {
++  $data = ($p | ConvertTo-Json -Depth 8).Replace("'","''")
++  $sql = "INSERT OR REPLACE INTO products(id,sku,title,kind,data) VALUES('{0}','{1}','{2}','{3}','{4}')" -f $p.id,$p.sku,$p.title,$p.kind,$data
++  sqlite3 $db $sql
++}
++
++# Discounts
++$d = Get-Content (Join-Path $root "schema\seed.discounts.json") -Raw | ConvertFrom-Json
++foreach ($p in $d.policies) {
++  $rules = ($p.rules | ConvertTo-Json -Depth 8).Replace("'","''")
++  $sql = "INSERT OR REPLACE INTO discount_policies(id,name,active,rules) VALUES('{0}','{1}',{2},'{3}')" -f $p.id,$p.name,$p.active,$rules
++  sqlite3 $db $sql
++}
++
++# Marketplace
++$m = Get-Content (Join-Path $root "schema\seed.marketplace.json") -Raw | ConvertFrom-Json
++foreach ($e in $m.exports) {
++  $skus = ($e.skus | ConvertTo-Json -Depth 8).Replace("'","''")
++  $sql = "INSERT OR REPLACE INTO marketplace_exports(id,reseller_code,skus,token) VALUES('{0}','{1}','{2}','{3}')" -f $e.id,$e.reseller_code,$skus,$e.token
++  sqlite3 $db $sql
++}
++
++# Tokens
++$t = Get-Content (Join-Path $root "schema\seed.tokens.json") -Raw | ConvertFrom-Json
++foreach ($row in $t.tokens) {
++  $sql = "INSERT OR REPLACE INTO api_tokens(token,label,scopes) VALUES('{0}','{1}','{2}')" -f $row.token,$row.label,$row.scopes
++  sqlite3 $db $sql
++}
++
++Write-Host "Done."
++Write-Host ""
++Write-Host "Demo tokens:"
++Write-Host "  - tok_public_read"
++Write-Host "  - tok_hippohex_demo"
++Write-Host ""
++Write-Host "Try:"
++Write-Host "  curl http://localhost:5000/api/ok"
++Write-Host "  curl http://localhost:5000/api/products"
++Write-Host "  curl 'http://localhost:5000/api/pricing/quote?sku=AXLE-001&qty=12&segment=reseller'"
++Write-Host "  curl -H 'Authorization: Bearer tok_hippohex_demo' 'http://localhost:5000/api/marketplace/catalog?reseller=HIPPOHEX-UK'"
+diff --git a/web/Pages/Demo.razor b/web/Pages/Demo.razor
+new file mode 100644
+index 0000000..d3e9f5a
+--- /dev/null
++++ b/web/Pages/Demo.razor
+@@ -0,0 +1,120 @@
++@page "/demo"
++@using System.Text.Json
++@inject Microsoft.JSInterop.IJSRuntime JS
++
++<h2>RampEdge VTEX-style Demo</h2>
++<p>Browse → Quote → Order → Checkout</p>
++
++<input @bind="q" placeholder="search sku or title" />
++<button class="btn" @onclick="Load">Search</button>
++<ul>
++  @foreach (var p in products)
++  {
++    <li>
++      <b>@p.GetProperty("title").GetString()</b> — @p.GetProperty("sku").GetString()
++      <button class="btn" @onclick="() => Quote(p.GetProperty(\"sku\").GetString()!)">Quote ×5</button>
++      @if (lastQuote.TryGetValue(p.GetProperty("sku").GetString()!, out var qv))
++      {
++        <span> — @qv.GetProperty("finalPrice").GetDecimal() @qv.GetProperty("currency").GetString()</span>
++        <button class="btn" @onclick="() => CreateOrder(p, 5, qv)">Order</button>
++      }
++    </li>
++  }
++}
++</ul>
++
++@if (!string.IsNullOrWhiteSpace(orderId))
++{
++  <h3>Order @orderId</h3>
++  <button class="btn" @onclick="Checkout">Checkout</button>
++  @if (!string.IsNullOrWhiteSpace(paymentUrl))
++  {
++    <p>Payment URL: <a href="@paymentUrl" target="_blank">@paymentUrl</a></p>
++  }
++}
++
++@code {
++  string q = "";
++  List<JsonElement> products = new();
++  Dictionary<string, JsonElement> lastQuote = new();
++  string? orderId;
++  string? paymentUrl;
++
++  async Task Load()
++  {
++    products = await JS.InvokeAsync<List<JsonElement>>("RampEdge.listProducts", q);
++    StateHasChanged();
++  }
++
++  async Task Quote(string sku)
++  {
++    var r = await JS.InvokeAsync<JsonElement>("RampEdge.quote", sku, 5, "vip");
++    lastQuote[sku] = r;
++    StateHasChanged();
++  }
++
++  async Task CreateOrder(JsonElement p, int qty, JsonElement qv)
++  {
++    orderId = Guid.NewGuid().ToString("N");
++    var sku = p.GetProperty("sku").GetString()!;
++    var price = qv.GetProperty("finalPrice").GetDecimal();
++    var order = new {
++      id = orderId,
++      customerRef = "demo@customer",
++      items = new object[]{ new { sku, qty, price } },
++      total = price * qty
++    };
++    await JS.InvokeVoidAsync("RampEdge.createOrder", order);
++    StateHasChanged();
++  }
++
++  async Task Checkout()
++  {
++    var r = await JS.InvokeAsync<JsonElement>("RampEdge.createCheckoutSession", orderId);
++    paymentUrl = r.GetProperty("paymentUrl").GetString();
++    StateHasChanged();
++  }
++}
+diff --git a/web/wwwroot/rampedge-sdk.js b/web/wwwroot/rampedge-sdk.js
+new file mode 100644
+index 0000000..a4c6f77
+--- /dev/null
++++ b/web/wwwroot/rampedge-sdk.js
+@@ -0,0 +1,39 @@
++// Minimal browser-exposed wrapper around /sdk for Blazor interop
++const S = {};
++async function j(path, init){ const r = await fetch(path, { headers:{"Content-Type":"application/json"}, ...init}); if(!r.ok) throw new Error(await r.text()); return r.json(); }
++S.listProducts = (q)=>j(`/api/products${q?`?search=${encodeURIComponent(q)}`:''}`);
++S.quote = (sku, qty, segment)=>j(`/api/pricing/quote?sku=${encodeURIComponent(sku)}&qty=${qty}&segment=${encodeURIComponent(segment||'')}`);
++S.createOrder = (order)=>j(`/api/orders`, { method:'POST', body: JSON.stringify(order) });
++S.createCheckoutSession = (orderId)=>j(`/api/checkout/session`, { method:'POST', body: JSON.stringify({ orderId }) });
++window.RampEdge = S;
+diff --git a/web/_Imports.razor b/web/_Imports.razor
+new file mode 100644
+index 0000000..3a1c1b2
+--- /dev/null
++++ b/web/_Imports.razor
+@@ -0,0 +1,3 @@
++@using Microsoft.AspNetCore.Components
++@using Microsoft.AspNetCore.Components.Web
++@using Microsoft.JSInterop
+diff --git a/web/Pages/_Host.cshtml b/web/Pages/_Host.cshtml
+new file mode 100644
+index 0000000..bacf0f2
+--- /dev/null
++++ b/web/Pages/_Host.cshtml
+@@ -0,0 +1,21 @@
++@page "/"
++@namespace web.Pages
++@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
++<!DOCTYPE html>
++<html lang="en">
++<head>
++  <meta charset="utf-8" />
++  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
++  <title>RampEdge Demo</title>
++  <script src="/rampedge-sdk.js"></script>
++</head>
++<body>
++  <app>
++      @(await Html.RenderComponentAsync<web.Pages.Demo>(RenderMode.ServerPrerendered))
++  </app>
++  <script src="_framework/blazor.server.js"></script>
++</body>
++</html>
+diff --git a/WPS/WP01_Foundation_SQLite_MinAPI.md b/WPS/WP01_Foundation_SQLite_MinAPI.md
+index 1111111..1111112 100644
+--- a/WPS/WP01_Foundation_SQLite_MinAPI.md
++++ b/WPS/WP01_Foundation_SQLite_MinAPI.md
+@@ -57,3 +57,13 @@
+ 
+ ## Risks / Notes
+ - Keep single DB connection per request; no migrations engine yet.
+ - Keep everything synchronous or simple async for clarity.
++
++## Quickstart (added)
++1) Run the API: `dotnet run --project api`
++2) Seed demo data: `bash ops/seed.sh` (or `powershell -f ops/seed.ps1`)
++3) Hit health: `curl http://localhost:5000/api/ok`
++4) Browse products: `curl http://localhost:5000/api/products`
++5) Get a quote: `curl "http://localhost:5000/api/pricing/quote?sku=AXLE-001&qty=12&segment=reseller"`
++6) Marketplace (token):  
++   `curl -H "Authorization: Bearer tok_hippohex_demo" "http://localhost:5000/api/marketplace/catalog?reseller=HIPPOHEX-UK"`
++7) Open `/demo` in the web app to run the end-to-end flow.

@@ -28,7 +28,12 @@
       "Bash(dotnet pack:*)",
       "Bash(powershell:*)",
       "Bash(dotnet list:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git commit:*)",
+      "Bash(winget install:*)",
+      "Bash(sqlite3:*)",
+      "Bash(dotnet run:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,19 @@
+{
+  "policies": [
+    {
+      "id": "POLICY-DEFAULT",
+      "name": "Default Volume/Segment",
+      "active": 1,
+      "rules": {
+        "volume": [
+          { "min": 10, "pct": 5 },
+          { "min": 25, "pct": 10 }
+        ],
+        "segments": [
+          { "code": "reseller", "pct": 12 },
+          { "code": "vip", "pct": 7 }
+        ]
+      }
+    }
+  ]
+}
