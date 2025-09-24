@@ -2501,15 +2501,15 @@ namespace Maker.RampEdge
                         request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
                     var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
                     var content_ = new System.Net.Http.ByteArrayContent(json_);
-                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("*/*");
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
-                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                 
-                    // Operation Path: "api/UpsertAddress"
-                    urlBuilder_.Append("api/UpsertAddress");
+                    // Operation Path: "api/address"
+                    urlBuilder_.Append("api/address");
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
