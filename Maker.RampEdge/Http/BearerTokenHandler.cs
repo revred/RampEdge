@@ -1,9 +1,10 @@
-using Maker.RampEdge.Services.Contracts;
+﻿using Maker.RampEdge.Services.Contracts;
 using System.Net;
 using System.Net.Http.Headers;
 
 namespace Maker.RampEdge.Http;
 
+// Attaches/refreshes Bearer token (use on API client only)
 public sealed class BearerTokenHandler : DelegatingHandler
 {
     private readonly IAuthenticationService _auth;
@@ -31,7 +32,7 @@ public sealed class BearerTokenHandler : DelegatingHandler
                 {
                     if (_onUnauthorized is not null)
                     {
-                        await _onUnauthorized(request);
+                        await _onUnauthorized(request); // notify caller
                         await _auth.LogoutAsync();
                     }
                     return new HttpResponseMessage(HttpStatusCode.Unauthorized) { RequestMessage = request };
@@ -43,8 +44,10 @@ public sealed class BearerTokenHandler : DelegatingHandler
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
+        // send to server
         var response = await base.SendAsync(request, ct);
 
+        // post-response: if API says 401 (e.g., server invalidated token), notify
         if (response.StatusCode == HttpStatusCode.Unauthorized && _onUnauthorized is not null)
             await _onUnauthorized(request);
 
