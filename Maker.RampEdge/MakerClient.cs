@@ -141,16 +141,6 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<OrderResponse> GetAllOrdersAsync(OrderRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>No Content</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task Insert_User_ActivityAsync(UserActivityRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<StringReply> AboutInfoAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
@@ -167,6 +157,26 @@ namespace Maker.RampEdge
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<StringReply> GetServicesAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<AddressResponse> GetAddressAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<UpsertAddressResponse> UpsertAddressAsync(AddressRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<OrderResponse> GetAllOrdersAsync(OrderRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task Insert_User_ActivityAsync(UserActivityRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
     }
 
@@ -2093,186 +2103,6 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<OrderResponse> GetAllOrdersAsync(OrderRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
-        {
-            if (body == null)
-                throw new System.ArgumentNullException("body");
-
-            var client_ = _httpClient;
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-
-                    if (businessunitkey != null)
-                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
-                    var content_ = new System.Net.Http.ByteArrayContent(json_);
-                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
-                    request_.Content = content_;
-                    request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
-
-                    var urlBuilder_ = new System.Text.StringBuilder();
-                
-                    // Operation Path: "api/product/GetAllOrders"
-                    urlBuilder_.Append("api/product/GetAllOrders");
-
-                    PrepareRequest(client_, request_, urlBuilder_);
-
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-
-                    PrepareRequest(client_, request_, url_);
-
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
-                        foreach (var item_ in response_.Headers)
-                            headers_[item_.Key] = item_.Value;
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-
-                        ProcessResponse(client_, response_);
-
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
-                        {
-                            var objectResponse_ = await ReadObjectResponseAsync<OrderResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
-                        }
-                        else
-                        if (status_ == 401)
-                        {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
-                        }
-                        else
-                        if (status_ == 403)
-                        {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>No Content</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task Insert_User_ActivityAsync(UserActivityRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
-        {
-            if (body == null)
-                throw new System.ArgumentNullException("body");
-
-            var client_ = _httpClient;
-            var disposeClient_ = false;
-            try
-            {
-                using (var request_ = new System.Net.Http.HttpRequestMessage())
-                {
-
-                    if (businessunitkey != null)
-                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
-                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
-                    var content_ = new System.Net.Http.ByteArrayContent(json_);
-                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
-                    request_.Content = content_;
-                    request_.Method = new System.Net.Http.HttpMethod("POST");
-
-                    var urlBuilder_ = new System.Text.StringBuilder();
-                
-                    // Operation Path: "api/product/InsertUserActivity"
-                    urlBuilder_.Append("api/product/InsertUserActivity");
-
-                    PrepareRequest(client_, request_, urlBuilder_);
-
-                    var url_ = urlBuilder_.ToString();
-                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
-
-                    PrepareRequest(client_, request_, url_);
-
-                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
-                    var disposeResponse_ = true;
-                    try
-                    {
-                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
-                        foreach (var item_ in response_.Headers)
-                            headers_[item_.Key] = item_.Value;
-                        if (response_.Content != null && response_.Content.Headers != null)
-                        {
-                            foreach (var item_ in response_.Content.Headers)
-                                headers_[item_.Key] = item_.Value;
-                        }
-
-                        ProcessResponse(client_, response_);
-
-                        var status_ = (int)response_.StatusCode;
-                        if (status_ == 204)
-                        {
-                            return;
-                        }
-                        else
-                        if (status_ == 401)
-                        {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
-                        }
-                        else
-                        if (status_ == 403)
-                        {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
-                        }
-                        else
-                        {
-                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
-                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
-                        }
-                    }
-                    finally
-                    {
-                        if (disposeResponse_)
-                            response_.Dispose();
-                    }
-                }
-            }
-            finally
-            {
-                if (disposeClient_)
-                    client_.Dispose();
-            }
-        }
-
-        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<StringReply> AboutInfoAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -2566,6 +2396,365 @@ namespace Maker.RampEdge
             }
         }
 
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<AddressResponse> GetAddressAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+
+                    if (businessunitkey != null)
+                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/GetAddress"
+                    urlBuilder_.Append("api/GetAddress");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<AddressResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
+                        }
+                        else
+                        if (status_ == 403)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<UpsertAddressResponse> UpsertAddressAsync(AddressRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+
+                    if (businessunitkey != null)
+                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("*/*");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/UpsertAddress"
+                    urlBuilder_.Append("api/UpsertAddress");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<UpsertAddressResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
+                        }
+                        else
+                        if (status_ == 403)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<OrderResponse> GetAllOrdersAsync(OrderRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+
+                    if (businessunitkey != null)
+                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/product/GetAllOrders"
+                    urlBuilder_.Append("api/product/GetAllOrders");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<OrderResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
+                        }
+                        else
+                        if (status_ == 403)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>No Content</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task Insert_User_ActivityAsync(UserActivityRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+
+                    if (businessunitkey != null)
+                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                
+                    // Operation Path: "api/product/InsertUserActivity"
+                    urlBuilder_.Append("api/product/InsertUserActivity");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 204)
+                        {
+                            return;
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
+                        }
+                        else
+                        if (status_ == 403)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -2755,6 +2944,57 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("quantity")]
         public int Quantity { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AddressDetails
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("barID")]
+        public long BarID { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("email")]
+        public string Email { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("fullName")]
+        public string FullName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("phoneNumber")]
+        public string PhoneNumber { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pincode")]
+        public string Pincode { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("country")]
+        public string Country { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("address")]
+        public string Address { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AddressRequest
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("barID")]
+        public long BarID { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("addressDetails")]
+        public AddressDetails AddressDetails { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class AddressResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("addressDetails")]
+        public System.Collections.Generic.ICollection<AddressDetails> AddressDetails { get; set; }
 
     }
 
@@ -3005,6 +3245,9 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("friendlyID")]
+        public string FriendlyID { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("barID")]
         public long BarID { get; set; }
 
@@ -3037,6 +3280,9 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("name")]
         public string Name { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("friendlyID")]
+        public string FriendlyID { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("barID")]
         public long BarID { get; set; }
@@ -3274,6 +3520,15 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("files")]
         public System.Collections.Generic.ICollection<FileString> Files { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class UpsertAddressResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("isSuccess")]
+        public bool IsSuccess { get; set; }
 
     }
 

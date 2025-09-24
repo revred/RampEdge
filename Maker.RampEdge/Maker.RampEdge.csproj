@@ -4,7 +4,8 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Title>Maker.RampEdge.Blazor</Title>
+    <Version>1.0.1</Version>
+    <Title>Maker.RampEdge</Title>
     <Authors>Maker AI</Authors>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
