@@ -2508,8 +2508,8 @@ namespace Maker.RampEdge
 
                     var urlBuilder_ = new System.Text.StringBuilder();
                 
-                    // Operation Path: "api/address"
-                    urlBuilder_.Append("api/address");
+                    // Operation Path: "api/UpsertAddress"
+                    urlBuilder_.Append("api/UpsertAddress");
 
                     PrepareRequest(client_, request_, urlBuilder_);
 
@@ -2957,8 +2957,8 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("email")]
         public string Email { get; set; }
 
-        [System.Text.Json.Serialization.JsonPropertyName("fullName")]
-        public string FullName { get; set; }
+        [System.Text.Json.Serialization.JsonPropertyName("site")]
+        public string Site { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("phoneNumber")]
         public string PhoneNumber { get; set; }
