@@ -93,6 +93,7 @@ public class AuthenticationService : IAuthenticationService
 
             AccessToken = RefreshToken = null;
             IsAuthenticated = false;
+            IsMakerAIUser = null;
             UserName = null;
             User = null;
 
