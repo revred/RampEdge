@@ -5,6 +5,7 @@ using Maker.RampEdge;
 using Maker.RampEdge.Services;
 using Maker.RampEdge.Services.Contracts;
 using Maker.RampEdge.Tests.Helper;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -89,5 +90,37 @@ public class AuthenticationServiceLoginTests
         sut.UserName.Should().BeNull();
 
         makerClient.VerifyAll();
+    }
+
+    [Fact]
+    public async Task UserAsync_WhenCalled_InvokesClientOnce()
+    {
+        // Arrange
+        var logger = Mock.Of<ILogger<AuthenticationService>>();
+        var storage = new InMemoryTokenStorage();
+        var mockClient = new Mock<IMakerClient>(MockBehavior.Strict);
+
+        var request = new UserRequest
+        {
+            UserDetail = "John Doe, johndoe@example.com"
+        };
+
+        mockClient.Setup(c => c.UserAsync(
+                It.IsAny<UserRequest>(),
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var sut = new AuthenticationService(mockClient.Object,storage, logger);
+
+        // Act
+        await sut.UserAsync(request);
+
+        // Assert
+        mockClient.Verify(c => c.UserAsync(
+            It.Is<UserRequest>(r => r.UserDetail == "John Doe, johndoe@example.com"),
+            It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

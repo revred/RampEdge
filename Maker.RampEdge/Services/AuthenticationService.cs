@@ -82,7 +82,7 @@ public class AuthenticationService : IAuthenticationService
             return false;
         }
     }
-
+   
     public async Task<bool> LogoutAsync()
     {
         try
@@ -237,4 +237,16 @@ public class AuthenticationService : IAuthenticationService
     }
 
     private void NotifyStateChanged() => OnChange?.Invoke();
+
+    public async Task UserAsync(UserRequest body)
+    {
+        try
+        {
+            await _makerClient.UserAsync(body);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error sending user data for {UserDetail}", body.UserDetail);
+        }
+    }
 }
