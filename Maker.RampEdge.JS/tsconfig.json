@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "rootDir": "src",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "strict": true,
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "allowJs": true,          // ✅ Allow .js files to be compiled
+    "checkJs": false          // ✅ (optional) Don't type-check JS files
+  },
+  "include": ["src/**/*"]
+}
