@@ -141,12 +141,22 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<ExtractStaticReply> ExtractStaticAsync(ExtractStaticRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<StringReply> AboutInfoAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
         System.Threading.Tasks.Task<StringReply> GetBlogsAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
+        System.Threading.Tasks.Task<BusinessInformation> GetBusinessInfoAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -187,9 +197,9 @@ namespace Maker.RampEdge
         private static System.Lazy<System.Text.Json.JsonSerializerOptions> _settings = new System.Lazy<System.Text.Json.JsonSerializerOptions>(CreateSerializerSettings, true);
         private System.Text.Json.JsonSerializerOptions _instanceSettings;
 
-    #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public MakerClient(System.Net.Http.HttpClient httpClient)
-    #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             _httpClient = httpClient;
             Initialize();
@@ -237,7 +247,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/authentication/exchange-code"
                     urlBuilder_.Append("api/authentication/exchange-code");
 
@@ -317,7 +327,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/entity/extract-static"
                     urlBuilder_.Append("api/entity/extract-static");
 
@@ -351,13 +361,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -404,7 +414,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/OrderCancel"
                     urlBuilder_.Append("api/product/OrderCancel");
 
@@ -438,13 +448,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -492,7 +502,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/Login"
                     urlBuilder_.Append("api/public/Login");
 
@@ -573,7 +583,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/authentication/refresh-token"
                     urlBuilder_.Append("api/public/authentication/refresh-token");
 
@@ -654,7 +664,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/authentication/Register"
                     urlBuilder_.Append("api/public/authentication/Register");
 
@@ -735,7 +745,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/authentication/RequestSsoCode"
                     urlBuilder_.Append("api/public/authentication/RequestSsoCode");
 
@@ -815,7 +825,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/entity/User"
                     urlBuilder_.Append("api/entity/User");
 
@@ -849,13 +859,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -903,7 +913,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/checkout/create-session"
                     urlBuilder_.Append("api/public/checkout/create-session");
 
@@ -977,7 +987,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/stripe/webhook"
                     urlBuilder_.Append("api/stripe/webhook");
 
@@ -1052,7 +1062,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/AddProductReport"
                     urlBuilder_.Append("api/product/AddProductReport");
 
@@ -1086,13 +1096,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -1140,7 +1150,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/GetReportByProduct"
                     urlBuilder_.Append("api/public/GetReportByProduct");
 
@@ -1220,7 +1230,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("PUT");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/UpdateProductReport"
                     urlBuilder_.Append("api/UpdateProductReport");
 
@@ -1254,13 +1264,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -1307,7 +1317,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/AddProductsToCart"
                     urlBuilder_.Append("api/product/AddProductsToCart");
 
@@ -1351,7 +1361,7 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
@@ -1412,7 +1422,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/ClearCart"
                     urlBuilder_.Append("api/product/ClearCart");
 
@@ -1456,7 +1466,7 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
@@ -1517,7 +1527,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/GetCart"
                     urlBuilder_.Append("api/product/GetCart");
 
@@ -1556,13 +1566,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -1610,7 +1620,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/ProductDetails"
                     urlBuilder_.Append("api/public/ProductDetails");
 
@@ -1684,7 +1694,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/ProductGroups"
                     urlBuilder_.Append("api/public/ProductGroups");
 
@@ -1765,7 +1775,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/ProductsBySlug"
                     urlBuilder_.Append("api/public/ProductsBySlug");
 
@@ -1845,7 +1855,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/RemoveProductFromTheCart"
                     urlBuilder_.Append("api/product/RemoveProductFromTheCart");
 
@@ -1889,7 +1899,7 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
@@ -1956,7 +1966,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/AddRating"
                     urlBuilder_.Append("api/AddRating");
 
@@ -1990,13 +2000,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -2044,7 +2054,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/GetRatingByProduct"
                     urlBuilder_.Append("api/public/GetRatingByProduct");
 
@@ -2103,6 +2113,99 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<ExtractStaticReply> ExtractStaticAsync(ExtractStaticRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+
+                    if (businessunitkey != null)
+                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
+                    var json_ = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.ByteArrayContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+
+                    // Operation Path: "api/ExtractStatic"
+                    urlBuilder_.Append("api/ExtractStatic");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<ExtractStaticReply>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 401)
+                        {
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
+                        }
+                        else
+                        if (status_ == 403)
+                        {
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("Forbidden", status_, responseText_, headers_, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<StringReply> AboutInfoAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -2118,7 +2221,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/AboutInfo"
                     urlBuilder_.Append("api/public/AboutInfo");
 
@@ -2192,7 +2295,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/GetBlogs"
                     urlBuilder_.Append("api/public/GetBlogs");
 
@@ -2251,6 +2354,80 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<BusinessInformation> GetBusinessInfoAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        {
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+
+                    if (businessunitkey != null)
+                        request_.Headers.TryAddWithoutValidation("businessunitkey", ConvertToString(businessunitkey, System.Globalization.CultureInfo.InvariantCulture));
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+
+                    // Operation Path: "api/public/GetBusinessInfo"
+                    urlBuilder_.Append("api/public/GetBusinessInfo");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<BusinessInformation>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <returns>OK</returns>
+        /// <exception cref="ApiException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<StringReply> GetDocumentationAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
@@ -2266,7 +2443,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/GetDocumentation"
                     urlBuilder_.Append("api/public/GetDocumentation");
 
@@ -2340,7 +2517,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/public/GetServices"
                     urlBuilder_.Append("api/public/GetServices");
 
@@ -2414,7 +2591,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/GetAddress"
                     urlBuilder_.Append("api/GetAddress");
 
@@ -2453,13 +2630,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -2507,7 +2684,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/UpsertAddress"
                     urlBuilder_.Append("api/UpsertAddress");
 
@@ -2546,13 +2723,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -2600,7 +2777,7 @@ namespace Maker.RampEdge
                     request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/GetAllOrders"
                     urlBuilder_.Append("api/product/GetAllOrders");
 
@@ -2639,13 +2816,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -2692,7 +2869,7 @@ namespace Maker.RampEdge
                     request_.Method = new System.Net.Http.HttpMethod("POST");
 
                     var urlBuilder_ = new System.Text.StringBuilder();
-                
+
                     // Operation Path: "api/product/InsertUserActivity"
                     urlBuilder_.Append("api/product/InsertUserActivity");
 
@@ -2726,13 +2903,13 @@ namespace Maker.RampEdge
                         else
                         if (status_ == 401)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Unauthorized", status_, responseText_, headers_, null);
                         }
                         else
                         if (status_ == 403)
                         {
-                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            string responseText_ = (response_.Content == null) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
                             throw new ApiException("Forbidden", status_, responseText_, headers_, null);
                         }
                         else
@@ -2771,21 +2948,21 @@ namespace Maker.RampEdge
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         private static System.Threading.Tasks.Task<string> ReadAsStringAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
         {
-    #if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER
             return content.ReadAsStringAsync(cancellationToken);
-    #else
+#else
             return content.ReadAsStringAsync();
-    #endif
+#endif
         }
 
         [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.AggressiveInlining)]
         private static System.Threading.Tasks.Task<System.IO.Stream> ReadAsStreamAsync(System.Net.Http.HttpContent content, System.Threading.CancellationToken cancellationToken)
         {
-    #if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER
             return content.ReadAsStreamAsync(cancellationToken);
-    #else
+#else
             return content.ReadAsStreamAsync();
-    #endif
+#endif
         }
 
         public bool ReadResponseAsString { get; set; }
@@ -2844,7 +3021,7 @@ namespace Maker.RampEdge
                     var field = System.Reflection.IntrospectionExtensions.GetTypeInfo(value.GetType()).GetDeclaredField(name);
                     if (field != null)
                     {
-                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field, typeof(System.Runtime.Serialization.EnumMemberAttribute)) 
+                        var attribute = System.Reflection.CustomAttributeExtensions.GetCustomAttribute(field, typeof(System.Runtime.Serialization.EnumMemberAttribute))
                             as System.Runtime.Serialization.EnumMemberAttribute;
                         if (attribute != null)
                         {
@@ -2856,13 +3033,13 @@ namespace Maker.RampEdge
                     return converted == null ? string.Empty : converted;
                 }
             }
-            else if (value is bool) 
+            else if (value is bool)
             {
                 return System.Convert.ToString((bool)value, cultureInfo).ToLowerInvariant();
             }
             else if (value is byte[])
             {
-                return System.Convert.ToBase64String((byte[]) value);
+                return System.Convert.ToBase64String((byte[])value);
             }
             else if (value is string[])
             {
@@ -2999,6 +3176,36 @@ namespace Maker.RampEdge
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class BusinessInformation
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("serviceHtml")]
+        public string ServiceHtml { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("blogHtml")]
+        public string BlogHtml { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("documentationHtml")]
+        public string DocumentationHtml { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("aboutHtml")]
+        public string AboutHtml { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("applicationName")]
+        public string ApplicationName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("tagLine")]
+        public string TagLine { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("copyRightNotice")]
+        public string CopyRightNotice { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("asset")]
+        public DigitalAsset Asset { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class CancelProductOrderRequest
     {
 
@@ -3042,7 +3249,7 @@ namespace Maker.RampEdge
         public string EmailAddress { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("address")]
-        public string Address { get; set; }
+        public long Address { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("items")]
         public System.Collections.Generic.ICollection<Item> Items { get; set; }
@@ -3070,6 +3277,21 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("is3DFile")]
         public bool Is3DFile { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class ExtractStaticReply
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("isValid")]
+        public string IsValid { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("errorMessage")]
+        public string ErrorMessage { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("reply")]
+        public string Reply { get; set; }
 
     }
 
@@ -3598,11 +3820,11 @@ namespace Maker.RampEdge
 
 }
 
-#pragma warning restore  108
-#pragma warning restore  114
-#pragma warning restore  472
-#pragma warning restore  612
-#pragma warning restore  649
+#pragma warning restore 108
+#pragma warning restore 114
+#pragma warning restore 472
+#pragma warning restore 612
+#pragma warning restore 649
 #pragma warning restore 1573
 #pragma warning restore 1591
 #pragma warning restore 8073
