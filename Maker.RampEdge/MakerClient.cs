@@ -3266,6 +3266,9 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("businessUnitKey")]
         public string BusinessUnitKey { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("returnUrl")]
+        public string ReturnUrl { get; set; }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
