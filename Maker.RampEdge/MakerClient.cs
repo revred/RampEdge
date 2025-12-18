@@ -3407,6 +3407,9 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
         public long CreatedDate { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("promisedDeliveryDate")]
+        public System.DateTimeOffset PromisedDeliveryDate { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public int Price { get; set; }
 
