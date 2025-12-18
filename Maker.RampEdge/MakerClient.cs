@@ -3200,8 +3200,17 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("copyRightNotice")]
         public string CopyRightNotice { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("socialMediaLinks")]
+        public string SocialMediaLinks { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("asset")]
         public DigitalAsset Asset { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("testimonials")]
+        public string Testimonials { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("contents")]
+        public System.Collections.Generic.IDictionary<string, string> Contents { get; set; }
 
     }
 
@@ -3256,6 +3265,9 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("businessUnitKey")]
         public string BusinessUnitKey { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("returnUrl")]
+        public string ReturnUrl { get; set; }
 
     }
 
@@ -3394,6 +3406,9 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("createdDate")]
         public long CreatedDate { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("promisedDeliveryDate")]
+        public System.DateTimeOffset PromisedDeliveryDate { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("price")]
         public int Price { get; set; }

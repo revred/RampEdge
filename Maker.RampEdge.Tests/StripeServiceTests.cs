@@ -18,7 +18,7 @@ namespace Maker.RampEdge.Tests
             var request = new CreateSessionRequest
             {
                 EmailAddress = "test@example.com",
-                Address = "123 Test Street",
+                Address = 0,
                 BusinessUnitKey = "unit-001",
                 Items = new List<Item>
             {
