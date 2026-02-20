@@ -3912,6 +3912,9 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("location")]
         public string Location { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("deviceId")]
+        public string DeviceId { get; set; }
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -4142,6 +4145,9 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("location")]
         public string Location { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("deviceId")]
+        public string DeviceId { get; set; }
 
     }
 
