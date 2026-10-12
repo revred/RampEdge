@@ -171,22 +171,22 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<StringReply> AddDemoAsync(AddDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<DemoVisit> AddDemoAsync(AddDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<StringReply> GetDemosAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<DemoListResponse> GetDemosAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<StringReply> UpdateDemoAsync(UpdateDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task<DemoVisit> UpdateDemoAsync(UpdateDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
+        /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        System.Threading.Tasks.Task<StringReply> DeleteDemoAsync(DeleteDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
+        System.Threading.Tasks.Task DeleteDemoAsync(DeleteDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken));
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
@@ -2682,7 +2682,7 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<StringReply> AddDemoAsync(AddDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<DemoVisit> AddDemoAsync(AddDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (body == null)
                 throw new System.ArgumentNullException("body");
@@ -2733,7 +2733,7 @@ namespace Maker.RampEdge
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<StringReply>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DemoVisit>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -2769,7 +2769,7 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<StringReply> GetDemosAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<DemoListResponse> GetDemosAsync(string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             var client_ = _httpClient;
             var disposeClient_ = false;
@@ -2814,7 +2814,7 @@ namespace Maker.RampEdge
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<StringReply>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DemoListResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -2850,7 +2850,7 @@ namespace Maker.RampEdge
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
         /// <returns>OK</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<StringReply> UpdateDemoAsync(UpdateDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task<DemoVisit> UpdateDemoAsync(UpdateDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (body == null)
                 throw new System.ArgumentNullException("body");
@@ -2901,7 +2901,7 @@ namespace Maker.RampEdge
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<StringReply>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<DemoVisit>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -2935,9 +2935,9 @@ namespace Maker.RampEdge
         }
 
         /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
-        /// <returns>OK</returns>
+        /// <returns>No Content</returns>
         /// <exception cref="ApiException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<StringReply> DeleteDemoAsync(DeleteDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
+        public virtual async System.Threading.Tasks.Task DeleteDemoAsync(DeleteDemoRequest body, string businessunitkey = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken))
         {
             if (body == null)
                 throw new System.ArgumentNullException("body");
@@ -2956,7 +2956,6 @@ namespace Maker.RampEdge
                     content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
                     request_.Content = content_;
                     request_.Method = new System.Net.Http.HttpMethod("POST");
-                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
 
                     var urlBuilder_ = new System.Text.StringBuilder();
 
@@ -2986,14 +2985,9 @@ namespace Maker.RampEdge
                         ProcessResponse(client_, response_);
 
                         var status_ = (int)response_.StatusCode;
-                        if (status_ == 200)
+                        if (status_ == 204)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<StringReply>(response_, headers_, cancellationToken).ConfigureAwait(false);
-                            if (objectResponse_.Object == null)
-                            {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
-                            }
-                            return objectResponse_.Object;
+                            return;
                         }
                         else
                         if (status_ == 403)
@@ -4196,10 +4190,10 @@ namespace Maker.RampEdge
         public string State { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("latitude")]
-        public long? Latitude { get; set; }
+        public double? Latitude { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("longitude")]
-        public long? Longitude { get; set; }
+        public double? Longitude { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("farmerName")]
         public string FarmerName { get; set; }
@@ -4217,10 +4211,10 @@ namespace Maker.RampEdge
         public string ProductUsed { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("doBefore")]
-        public long? DoBefore { get; set; }
+        public double? DoBefore { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("doAfter")]
-        public long? DoAfter { get; set; }
+        public double? DoAfter { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("outcome")]
         public string Outcome { get; set; }
@@ -4233,6 +4227,9 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("photos")]
         public System.Collections.Generic.ICollection<FileString> Photos { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("givenByName")]
+        public string GivenByName { get; set; }
 
     }
 
@@ -4452,6 +4449,84 @@ namespace Maker.RampEdge
 
         [System.Text.Json.Serialization.JsonPropertyName("demoBarID")]
         public long DemoBarID { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DemoListResponse
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("demos")]
+        public System.Collections.Generic.ICollection<DemoVisit> Demos { get; set; }
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.5.0.0 (NJsonSchema v11.4.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class DemoVisit
+    {
+
+        [System.Text.Json.Serialization.JsonPropertyName("barID")]
+        public long BarID { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("demoDateUtc")]
+        public System.DateTimeOffset DemoDateUtc { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("place")]
+        public string Place { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("district")]
+        public string District { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("state")]
+        public string State { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("latitude")]
+        public double? Latitude { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("longitude")]
+        public double? Longitude { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("farmerName")]
+        public string FarmerName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("farmerPhone")]
+        public string FarmerPhone { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("species")]
+        public string Species { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("pondSize")]
+        public string PondSize { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("productUsed")]
+        public string ProductUsed { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("doBefore")]
+        public double? DoBefore { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("doAfter")]
+        public double? DoAfter { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("outcome")]
+        public string Outcome { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("notes")]
+        public string Notes { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("videoUrl")]
+        public string VideoUrl { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("photos")]
+        public System.Collections.Generic.ICollection<DigitalAsset> Photos { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("givenBy")]
+        public string GivenBy { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("givenByName")]
+        public string GivenByName { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("createdAtUtc")]
+        public System.DateTimeOffset CreatedAtUtc { get; set; }
 
     }
 
@@ -5036,10 +5111,10 @@ namespace Maker.RampEdge
         public string State { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("latitude")]
-        public long? Latitude { get; set; }
+        public double? Latitude { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("longitude")]
-        public long? Longitude { get; set; }
+        public double? Longitude { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("farmerName")]
         public string FarmerName { get; set; }
@@ -5057,10 +5132,10 @@ namespace Maker.RampEdge
         public string ProductUsed { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("doBefore")]
-        public long? DoBefore { get; set; }
+        public double? DoBefore { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("doAfter")]
-        public long? DoAfter { get; set; }
+        public double? DoAfter { get; set; }
 
         [System.Text.Json.Serialization.JsonPropertyName("outcome")]
         public string Outcome { get; set; }
@@ -5074,8 +5149,14 @@ namespace Maker.RampEdge
         [System.Text.Json.Serialization.JsonPropertyName("photos")]
         public System.Collections.Generic.ICollection<FileString> Photos { get; set; }
 
+        [System.Text.Json.Serialization.JsonPropertyName("givenByName")]
+        public string GivenByName { get; set; }
+
         [System.Text.Json.Serialization.JsonPropertyName("demoBarID")]
         public long DemoBarID { get; set; }
+
+        [System.Text.Json.Serialization.JsonPropertyName("removePhotoUrls")]
+        public System.Collections.Generic.ICollection<string> RemovePhotoUrls { get; set; }
 
     }
 
